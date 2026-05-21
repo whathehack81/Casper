@@ -7,6 +7,8 @@ Creates the baseline axis workspace and package structure.
 from pathlib import Path
 import sys
 
+from casper.core.axis import CasperAxis
+
 
 CASPER_ROOT = Path.cwd()
 WORKSPACE = CASPER_ROOT / ".casper"
@@ -63,6 +65,12 @@ def bootstrap() -> None:
     print(f"[+] State: {WORKSPACE / 'state'}")
     print(f"[+] Evidence: {WORKSPACE / 'evidence'}")
     print(f"[+] Logs: {WORKSPACE / 'logs'}")
+
+    axis = CasperAxis(WORKSPACE)
+    axis.initialize()
+
+    if not axis.validate():
+        raise RuntimeError("Axis validation failed")
 
 
 def main() -> None:
