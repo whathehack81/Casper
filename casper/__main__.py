@@ -6,6 +6,7 @@ from pathlib import Path
 
 from casper.core.runtime import CasperRuntime
 from casper.tools.http_probe import probe_url
+from casper.rules.builtin import successful_probe_rule
 
 
 def build_runtime() -> CasperRuntime:
@@ -113,6 +114,9 @@ def cmd_report() -> None:
     except FileNotFoundError:
         target_payload = None
 
+    runtime.register_rule(successful_probe_rule(runtime.evidence))
+    can_advance = runtime.validate()
+
     payload = {
         "session": {
             "session_id": session.session_id,
@@ -120,6 +124,15 @@ def cmd_report() -> None:
             "status": session.status,
         },
         "target": target_payload,
+        "can_advance": can_advance,
+        "rule_results": [
+            {
+                "name": result.name,
+                "passed": result.passed,
+                "reason": result.reason,
+            }
+            for result in runtime.rules.results
+        ],
         "evidence_count": len(runtime.evidence.all()),
         "findings_count": len(runtime.findings.all()),
         "findings": runtime.findings.export(),
@@ -172,12 +185,31 @@ def cmd_run_probe(args: argparse.Namespace) -> None:
         "content": evidence.content,
     }, indent=2, sort_keys=True))
 
+
+def cmd_validate() -> None:
+    runtime = build_runtime()
+    runtime.initialize()
+    runtime.register_rule(successful_probe_rule(runtime.evidence))
+
+    print(json.dumps({
+        "can_advance": runtime.validate(),
+        "rule_results": [
+            {
+                "name": result.name,
+                "passed": result.passed,
+                "reason": result.reason,
+            }
+            for result in runtime.rules.results
+        ],
+    }, indent=2, sort_keys=True))
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="casper")
     sub = parser.add_subparsers(dest="command")
 
     sub.add_parser("status")
     sub.add_parser("report")
+    sub.add_parser("validate")
 
     run = sub.add_parser("run")
     run_sub = run.add_subparsers(dest="run_command")
@@ -224,6 +256,8 @@ def main() -> None:
         cmd_status()
     elif args.command == "report":
         cmd_report()
+    elif args.command == "validate":
+        cmd_validate()
     elif args.command == "run" and args.run_command == "probe":
         cmd_run_probe(args)
     elif args.command == "target" and args.target_command == "set":
