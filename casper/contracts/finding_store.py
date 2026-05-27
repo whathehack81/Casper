@@ -57,3 +57,16 @@ class FindingStore:
                 indent=2,
                 sort_keys=True,
             )
+
+    def link_evidence(
+        self,
+        title: str,
+        evidence_id: str,
+    ) -> Finding:
+        for finding in self._findings:
+            if finding.title == title:
+                finding.link_evidence(evidence_id)
+                self._persist()
+                return finding
+
+        raise ValueError(f"finding not found: {title}")

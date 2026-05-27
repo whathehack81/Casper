@@ -82,6 +82,22 @@ def cmd_finding_list() -> None:
         sort_keys=True,
     ))
 
+
+def cmd_finding_link_evidence(args: argparse.Namespace) -> None:
+    runtime = build_runtime()
+    runtime.initialize()
+
+    finding = runtime.link_finding_evidence(
+        title=args.title,
+        evidence_id=args.evidence_id,
+    )
+
+    print(json.dumps({
+        "title": finding.title,
+        "severity": finding.severity,
+        "evidence_ids": finding.evidence_ids,
+    }, indent=2, sort_keys=True))
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="casper")
     sub = parser.add_subparsers(dest="command")
@@ -92,6 +108,10 @@ def main() -> None:
     finding_sub = finding.add_subparsers(dest="finding_command")
 
     finding_sub.add_parser("list")
+
+    finding_link = finding_sub.add_parser("link-evidence")
+    finding_link.add_argument("--title", required=True)
+    finding_link.add_argument("--evidence-id", required=True)
 
     finding_create = finding_sub.add_parser("create")
     finding_create.add_argument("--title", required=True)
@@ -120,6 +140,8 @@ def main() -> None:
         cmd_finding_create(args)
     elif args.command == "finding" and args.finding_command == "list":
         cmd_finding_list()
+    elif args.command == "finding" and args.finding_command == "link-evidence":
+        cmd_finding_link_evidence(args)
     else:
         parser.print_help()
 

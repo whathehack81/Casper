@@ -68,3 +68,14 @@ class CasperRuntime:
         severity: str,
     ) -> Finding:
         return self.findings.create(title=title, severity=severity)
+
+
+    def link_finding_evidence(
+        self,
+        title: str,
+        evidence_id: str,
+    ) -> Finding:
+        return self.findings.link_evidence(
+            title=title,
+            evidence_id=evidence_id,
+        )
