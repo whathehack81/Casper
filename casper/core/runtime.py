@@ -11,6 +11,8 @@ Coordinates:
 from pathlib import Path
 from typing import Any
 
+from casper.contracts.finding import Finding
+from casper.contracts.finding_store import FindingStore
 from casper.evidence.registry import Evidence, EvidenceRegistry
 from casper.rules.engine import RuleEngine
 from casper.state.session import SessionState, SessionStore
@@ -24,6 +26,7 @@ class CasperRuntime:
         self.rules = RuleEngine()
         self.evidence = EvidenceRegistry(workspace)
         self.sessions = SessionStore(workspace)
+        self.findings = FindingStore(workspace)
 
         self.session: SessionState | None = None
 
@@ -35,6 +38,11 @@ class CasperRuntime:
 
         try:
             self.evidence.load()
+        except FileNotFoundError:
+            pass
+
+        try:
+            self.findings.load()
         except FileNotFoundError:
             pass
 
@@ -52,3 +60,11 @@ class CasperRuntime:
         content: dict,
     ) -> Evidence:
         return self.evidence.add(source=source, content=content)
+
+
+    def create_finding(
+        self,
+        title: str,
+        severity: str,
+    ) -> Finding:
+        return self.findings.create(title=title, severity=severity)
