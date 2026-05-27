@@ -116,12 +116,48 @@ def cmd_report() -> None:
 
     print(json.dumps(payload, indent=2, sort_keys=True))
 
+
+def cmd_target_set(args: argparse.Namespace) -> None:
+    runtime = build_runtime()
+    runtime.initialize()
+
+    target = runtime.set_target(
+        name=args.name,
+        scope=args.scope,
+    )
+
+    print(json.dumps({
+        "name": target.name,
+        "scope": target.scope,
+    }, indent=2, sort_keys=True))
+
+
+def cmd_target_show() -> None:
+    runtime = build_runtime()
+    runtime.initialize()
+
+    target = runtime.load_target()
+
+    print(json.dumps({
+        "name": target.name,
+        "scope": target.scope,
+    }, indent=2, sort_keys=True))
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="casper")
     sub = parser.add_subparsers(dest="command")
 
     sub.add_parser("status")
     sub.add_parser("report")
+
+    target = sub.add_parser("target")
+    target_sub = target.add_subparsers(dest="target_command")
+
+    target_set = target_sub.add_parser("set")
+    target_set.add_argument("--name", required=True)
+    target_set.add_argument("--scope", required=True)
+
+    target_sub.add_parser("show")
 
     finding = sub.add_parser("finding")
     finding_sub = finding.add_subparsers(dest="finding_command")
@@ -153,6 +189,10 @@ def main() -> None:
         cmd_status()
     elif args.command == "report":
         cmd_report()
+    elif args.command == "target" and args.target_command == "set":
+        cmd_target_set(args)
+    elif args.command == "target" and args.target_command == "show":
+        cmd_target_show()
     elif args.command == "evidence" and args.evidence_command == "add":
         cmd_evidence_add(args)
     elif args.command == "evidence" and args.evidence_command == "list":

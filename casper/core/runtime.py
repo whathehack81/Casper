@@ -16,6 +16,7 @@ from casper.contracts.finding_store import FindingStore
 from casper.evidence.registry import Evidence, EvidenceRegistry
 from casper.rules.engine import RuleEngine
 from casper.state.session import SessionState, SessionStore
+from casper.state.target import TargetState, TargetStore
 
 
 class CasperRuntime:
@@ -27,6 +28,7 @@ class CasperRuntime:
         self.evidence = EvidenceRegistry(workspace)
         self.sessions = SessionStore(workspace)
         self.findings = FindingStore(workspace)
+        self.targets = TargetStore(workspace)
 
         self.session: SessionState | None = None
 
@@ -79,3 +81,14 @@ class CasperRuntime:
             title=title,
             evidence_id=evidence_id,
         )
+
+
+    def set_target(
+        self,
+        name: str,
+        scope: str,
+    ) -> TargetState:
+        return self.targets.set(name=name, scope=scope)
+
+    def load_target(self) -> TargetState:
+        return self.targets.load()
