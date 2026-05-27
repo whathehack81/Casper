@@ -71,6 +71,8 @@ class CasperRuntime:
                 "evidence_id": evidence.evidence_id,
                 "source": source,
                 "run_id": content.get("run_id"),
+                "worker_id": content.get("worker_id"),
+                "lane": content.get("lane"),
             },
         )
 

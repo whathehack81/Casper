@@ -11,6 +11,7 @@ from casper.tools.executor import export_result, persist_artifacts, run_command
 from casper.tools.http_probe import probe_url
 from pathlib import Path
 from casper.runtime.manifest import build_manifest, write_manifest
+from casper.workers.worker import create_worker
 
 
 def build_runtime() -> CasperRuntime:
@@ -320,7 +321,14 @@ def cmd_tool_httpx(args: argparse.Namespace) -> None:
         "stderr_bytes": len(result.stderr.encode()),
     }
 
-    evidence_payload["run_id"] = getattr(args, "run_id", None)
+    worker = create_worker(
+        run_id=getattr(args, "run_id", "unknown"),
+        lane="tool-httpx",
+    )
+
+    evidence_payload["run_id"] = worker.run_id
+    evidence_payload["worker_id"] = worker.worker_id
+    evidence_payload["lane"] = worker.lane
 
     evidence = runtime.record_evidence(
         source="tool-httpx",
