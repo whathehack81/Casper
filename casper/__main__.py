@@ -203,6 +203,36 @@ def cmd_validate() -> None:
         ],
     }, indent=2, sort_keys=True))
 
+
+def cmd_run_target() -> None:
+    runtime = build_runtime()
+    runtime.initialize()
+
+    target = runtime.load_target()
+    url = target.name
+    if not url.startswith(("http://", "https://")):
+        url = f"https://{url}"
+
+    result = probe_url(url)
+
+    evidence = runtime.record_evidence(
+        source="http-probe",
+        content=result,
+    )
+
+    runtime.register_rule(successful_probe_rule(runtime.evidence))
+    can_advance = runtime.validate()
+
+    print(json.dumps({
+        "target": {
+            "name": target.name,
+            "scope": target.scope,
+        },
+        "probe": result,
+        "evidence_id": evidence.evidence_id,
+        "can_advance": can_advance,
+    }, indent=2, sort_keys=True))
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="casper")
     sub = parser.add_subparsers(dest="command")
@@ -216,6 +246,8 @@ def main() -> None:
 
     probe = run_sub.add_parser("probe")
     probe.add_argument("--url", required=True)
+
+    run_sub.add_parser("target")
 
     target = sub.add_parser("target")
     target_sub = target.add_subparsers(dest="target_command")
@@ -260,6 +292,8 @@ def main() -> None:
         cmd_validate()
     elif args.command == "run" and args.run_command == "probe":
         cmd_run_probe(args)
+    elif args.command == "run" and args.run_command == "target":
+        cmd_run_target()
     elif args.command == "target" and args.target_command == "set":
         cmd_target_set(args)
     elif args.command == "target" and args.target_command == "show":
