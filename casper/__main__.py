@@ -247,6 +247,26 @@ def cmd_artifact_cat(args: argparse.Namespace) -> None:
 
     print(path.read_text(encoding="utf-8"), end="")
 
+
+def cmd_artifact_verify(args: argparse.Namespace) -> None:
+    workspace = Path.cwd() / ".casper"
+
+    stdout_path = workspace / "artifacts" / f"{args.sha256}.stdout"
+    stderr_path = workspace / "artifacts" / f"{args.sha256}.stderr"
+
+    payload = {
+        "sha256": args.sha256,
+        "stdout_exists": stdout_path.exists(),
+        "stderr_exists": stderr_path.exists(),
+    }
+
+    payload["valid"] = (
+        payload["stdout_exists"]
+        and payload["stderr_exists"]
+    )
+
+    print(json.dumps(payload, indent=2, sort_keys=True))
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="casper")
     sub = parser.add_subparsers(dest="command")
@@ -258,6 +278,8 @@ def main() -> None:
     artifact = sub.add_parser("artifact")
     artifact_sub = artifact.add_subparsers(dest="artifact_command")
     artifact_cat = artifact_sub.add_parser("cat")
+    artifact_verify = artifact_sub.add_parser("verify")
+    artifact_verify.add_argument("--sha256", required=True)
     artifact_cat.add_argument("--sha256", required=True)
     artifact_cat.add_argument("--stream", choices=["stdout", "stderr"], required=True)
 
@@ -312,6 +334,8 @@ def main() -> None:
         cmd_validate()
     elif args.command == "artifact" and args.artifact_command == "cat":
         cmd_artifact_cat(args)
+    elif args.command == "artifact" and args.artifact_command == "verify":
+        cmd_artifact_verify(args)
     elif args.command == "workspace" and args.workspace_command == "reset":
         cmd_workspace_reset()
     elif args.command == "run" and args.run_command == "probe":
