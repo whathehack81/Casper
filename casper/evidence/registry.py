@@ -33,6 +33,9 @@ class EvidenceRegistry:
             json.dumps(payload, sort_keys=True).encode()
         ).hexdigest()
 
+        content = dict(content)
+        content["evidence_id"] = digest
+
         evidence = Evidence(
             evidence_id=digest,
             timestamp=timestamp,

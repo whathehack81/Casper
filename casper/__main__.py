@@ -320,6 +320,8 @@ def cmd_tool_httpx(args: argparse.Namespace) -> None:
         "stderr_bytes": len(result.stderr.encode()),
     }
 
+    evidence_payload["run_id"] = getattr(args, "run_id", None)
+
     evidence = runtime.record_evidence(
         source="tool-httpx",
         content=evidence_payload,
@@ -333,6 +335,7 @@ def main() -> None:
 
     manifest = build_manifest(sys.argv)
     write_manifest(Path(".casper") / "runs" / manifest.run_id / "manifest.json", manifest)
+
 
     parser = argparse.ArgumentParser(prog="casper")
     sub = parser.add_subparsers(dest="command")
@@ -394,6 +397,7 @@ def main() -> None:
     evidence_sub.add_parser("list")
 
     args = parser.parse_args()
+    setattr(args, "run_id", manifest.run_id)
 
     if args.command in (None, "status"):
         cmd_status()
