@@ -1,4 +1,5 @@
 from __future__ import annotations
+import sys
 
 import argparse
 import json
@@ -8,6 +9,8 @@ from casper.core.runtime import CasperRuntime
 from casper.rules.builtin import successful_probe_rule
 from casper.tools.executor import export_result, persist_artifacts, run_command
 from casper.tools.http_probe import probe_url
+from pathlib import Path
+from casper.runtime.manifest import build_manifest, write_manifest
 
 
 def build_runtime() -> CasperRuntime:
@@ -327,6 +330,10 @@ def cmd_tool_httpx(args: argparse.Namespace) -> None:
     print_json(evidence_payload)
 
 def main() -> None:
+
+    manifest = build_manifest(sys.argv)
+    write_manifest(Path(".casper") / "runs" / manifest.run_id / "manifest.json", manifest)
+
     parser = argparse.ArgumentParser(prog="casper")
     sub = parser.add_subparsers(dest="command")
 
