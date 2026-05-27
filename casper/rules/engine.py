@@ -27,9 +27,11 @@ class Rule:
 class RuleEngine:
     def __init__(self) -> None:
         self.rules: list[Rule] = []
+        self.results: list[RuleResult] = []
 
     def register(self, rule: Rule) -> None:
         self.rules.append(rule)
+        self.results = []
 
     def evaluate(self) -> list[RuleResult]:
         results: list[RuleResult] = []
@@ -44,10 +46,12 @@ class RuleEngine:
                 )
             )
 
-        return results
+        self.results = results
+        return list(self.results)
 
     def can_advance(self) -> bool:
         if not self.rules:
             return False
 
-        return all(result.passed for result in self.evaluate())
+        results = self.results or self.evaluate()
+        return all(result.passed for result in results)
