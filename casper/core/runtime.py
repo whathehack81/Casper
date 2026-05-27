@@ -14,6 +14,7 @@ from typing import Any
 from casper.contracts.finding import Finding
 from casper.contracts.finding_store import FindingStore
 from casper.evidence.registry import Evidence, EvidenceRegistry
+from casper.events.store import EventStore
 from casper.rules.engine import RuleEngine
 from casper.state.session import SessionState, SessionStore
 from casper.state.target import TargetState, TargetStore
@@ -26,6 +27,7 @@ class CasperRuntime:
 
         self.rules = RuleEngine()
         self.evidence = EvidenceRegistry(workspace)
+        self.events = EventStore(workspace)
         self.sessions = SessionStore(workspace)
         self.findings = FindingStore(workspace)
         self.targets = TargetStore(workspace)
@@ -61,7 +63,18 @@ class CasperRuntime:
         source: str,
         content: dict,
     ) -> Evidence:
-        return self.evidence.add(source=source, content=content)
+        evidence = self.evidence.add(source=source, content=content)
+
+        self.events.append(
+            event_type="evidence.recorded",
+            payload={
+                "evidence_id": evidence.evidence_id,
+                "source": source,
+                "run_id": content.get("run_id"),
+            },
+        )
+
+        return evidence
 
 
     def create_finding(
