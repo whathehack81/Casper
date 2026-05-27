@@ -9,9 +9,14 @@ class Finding:
     target: Optional[str] = None
     evidence: List[Dict[str, Any]] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
+    evidence_ids: List[str] = field(default_factory=list)
 
     def add_evidence(self, kind: str, value: Any, note: Optional[str] = None) -> None:
         item = {"kind": kind, "value": value}
         if note:
             item["note"] = note
         self.evidence.append(item)
+
+    def link_evidence(self, evidence_id: str) -> None:
+        if evidence_id not in self.evidence_ids:
+            self.evidence_ids.append(evidence_id)
