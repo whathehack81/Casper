@@ -1,61 +1,49 @@
-"""
-Casper evidence registry.
+from __future__ import annotations
 
-All execution evidence must be registered,
-tracked, reproducible, and timestamped.
-"""
-
-from dataclasses import dataclass, asdict
-from pathlib import Path
-from datetime import datetime
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
+from hashlib import sha256
 import json
 
 
 @dataclass(frozen=True)
 class Evidence:
     evidence_id: str
-    created_at: str
-    category: str
+    timestamp: str
     source: str
-    data: dict
+    content: dict
 
 
 class EvidenceRegistry:
-    def __init__(self, workspace: Path):
-        self.workspace = workspace
-        self.evidence_dir = workspace / "evidence"
+    def __init__(self) -> None:
+        self._entries: list[Evidence] = []
 
-    def create(
-        self,
-        category: str,
-        source: str,
-        data: dict,
-    ) -> Evidence:
+    def add(self, source: str, content: dict) -> Evidence:
+        timestamp = datetime.now(UTC).isoformat()
 
-        timestamp = datetime.utcnow()
+        payload = {
+            "timestamp": timestamp,
+            "source": source,
+            "content": content,
+        }
+
+        digest = sha256(
+            json.dumps(payload, sort_keys=True).encode()
+        ).hexdigest()
 
         evidence = Evidence(
-            evidence_id=timestamp.strftime("%Y%m%d-%H%M%S"),
-            created_at=timestamp.isoformat(),
-            category=category,
+            evidence_id=digest,
+            timestamp=timestamp,
             source=source,
-            data=data,
+            content=content,
         )
 
-        self._store(evidence)
+        self._entries.append(evidence)
 
         return evidence
 
-    def _store(self, evidence: Evidence) -> None:
-        output = (
-            self.evidence_dir
-            / f"{evidence.evidence_id}.json"
-        )
+    def all(self) -> list[Evidence]:
+        return list(self._entries)
 
-        with output.open("w", encoding="utf-8") as handle:
-            json.dump(
-                asdict(evidence),
-                handle,
-                indent=4,
-                sort_keys=True,
-            )
+    def export(self) -> list[dict]:
+        return [asdict(entry) for entry in self._entries]
