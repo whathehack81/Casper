@@ -8,3 +8,12 @@ def test_session_store_create(tmp_path):
 
     assert session.status == "initialized"
     assert (tmp_path / "state" / "session.json").exists()
+
+
+def test_session_store_load(tmp_path):
+    store = SessionStore(tmp_path)
+    created = store.create()
+
+    loaded = store.load()
+
+    assert loaded == created

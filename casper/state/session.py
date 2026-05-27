@@ -46,3 +46,11 @@ class SessionStore:
                 indent=4,
                 sort_keys=True,
             )
+
+    def load(self) -> SessionState:
+        input_path = self.state_dir / "session.json"
+
+        with input_path.open("r", encoding="utf-8") as handle:
+            data = json.load(handle)
+
+        return SessionState(**data)
