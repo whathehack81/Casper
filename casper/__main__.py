@@ -233,6 +233,24 @@ def cmd_run_target() -> None:
         "can_advance": can_advance,
     }, indent=2, sort_keys=True))
 
+
+def cmd_workspace_reset() -> None:
+    workspace = Path.cwd() / ".casper"
+
+    if not workspace.exists():
+        print(json.dumps({"reset": False, "reason": "workspace not found"}, indent=2))
+        return
+
+    for path in sorted(workspace.rglob("*"), reverse=True):
+        if path.is_file():
+            path.unlink()
+        elif path.is_dir():
+            path.rmdir()
+
+    workspace.rmdir()
+
+    print(json.dumps({"reset": True, "workspace": str(workspace)}, indent=2))
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="casper")
     sub = parser.add_subparsers(dest="command")
@@ -240,6 +258,10 @@ def main() -> None:
     sub.add_parser("status")
     sub.add_parser("report")
     sub.add_parser("validate")
+
+    workspace = sub.add_parser("workspace")
+    workspace_sub = workspace.add_subparsers(dest="workspace_command")
+    workspace_sub.add_parser("reset")
 
     run = sub.add_parser("run")
     run_sub = run.add_subparsers(dest="run_command")
@@ -290,6 +312,8 @@ def main() -> None:
         cmd_report()
     elif args.command == "validate":
         cmd_validate()
+    elif args.command == "workspace" and args.workspace_command == "reset":
+        cmd_workspace_reset()
     elif args.command == "run" and args.run_command == "probe":
         cmd_run_probe(args)
     elif args.command == "run" and args.run_command == "target":
