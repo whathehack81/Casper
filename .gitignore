@@ -7,3 +7,6 @@ __pycache__/
 logs/
 tmp/
 runtime/
+
+.casper/
+scratch_run.py
