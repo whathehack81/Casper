@@ -237,6 +237,16 @@ def cmd_workspace_reset() -> None:
     print_json({"reset": True, "workspace": str(workspace)})
 
 
+
+def cmd_artifact_cat(args: argparse.Namespace) -> None:
+    workspace = Path.cwd() / ".casper"
+    path = workspace / "artifacts" / f"{args.sha256}.{args.stream}"
+
+    if not path.exists():
+        raise SystemExit(f"artifact not found: {path}")
+
+    print(path.read_text(encoding="utf-8"), end="")
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="casper")
     sub = parser.add_subparsers(dest="command")
@@ -244,6 +254,12 @@ def main() -> None:
     sub.add_parser("status")
     sub.add_parser("report")
     sub.add_parser("validate")
+
+    artifact = sub.add_parser("artifact")
+    artifact_sub = artifact.add_subparsers(dest="artifact_command")
+    artifact_cat = artifact_sub.add_parser("cat")
+    artifact_cat.add_argument("--sha256", required=True)
+    artifact_cat.add_argument("--stream", choices=["stdout", "stderr"], required=True)
 
     cmd_parser = sub.add_parser("cmd")
     cmd_parser.add_argument("argv", nargs=argparse.REMAINDER)
@@ -294,6 +310,8 @@ def main() -> None:
         cmd_report()
     elif args.command == "validate":
         cmd_validate()
+    elif args.command == "artifact" and args.artifact_command == "cat":
+        cmd_artifact_cat(args)
     elif args.command == "workspace" and args.workspace_command == "reset":
         cmd_workspace_reset()
     elif args.command == "run" and args.run_command == "probe":
