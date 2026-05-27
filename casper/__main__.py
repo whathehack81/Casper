@@ -290,6 +290,42 @@ def cmd_artifact_verify(args: argparse.Namespace) -> None:
 
     print(json.dumps(payload, indent=2, sort_keys=True))
 
+
+def cmd_tool_httpx(args: argparse.Namespace) -> None:
+    runtime = build_runtime()
+    runtime.initialize()
+
+    argv = args.argv
+    if argv and argv[0] == "--":
+        argv = argv[1:]
+
+    command = ["httpx", *argv]
+
+    result = run_command(command)
+    exported = export_result(result)
+    artifacts = persist_artifacts(result, runtime.workspace)
+
+    evidence_payload = {
+        "tool": "httpx",
+        "command": exported["command"],
+        "exit_code": exported["exit_code"],
+        "timestamp": exported["timestamp"],
+        "sha256": exported["sha256"],
+        "stdout_path": artifacts["stdout_path"],
+        "stderr_path": artifacts["stderr_path"],
+        "stdout_bytes": len(result.stdout.encode()),
+        "stderr_bytes": len(result.stderr.encode()),
+    }
+
+    evidence = runtime.record_evidence(
+        source="tool-httpx",
+        content=evidence_payload,
+    )
+
+    evidence_payload["evidence_id"] = evidence.evidence_id
+
+    print_json(evidence_payload)
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="casper")
     sub = parser.add_subparsers(dest="command")
@@ -297,6 +333,11 @@ def main() -> None:
     sub.add_parser("status")
     sub.add_parser("report")
     sub.add_parser("validate")
+
+    tool = sub.add_parser("tool")
+    tool_sub = tool.add_subparsers(dest="tool_command")
+    tool_httpx = tool_sub.add_parser("httpx")
+    tool_httpx.add_argument("argv", nargs=argparse.REMAINDER)
 
     artifact = sub.add_parser("artifact")
     artifact_sub = artifact.add_subparsers(dest="artifact_command")
@@ -355,6 +396,8 @@ def main() -> None:
         cmd_report()
     elif args.command == "validate":
         cmd_validate()
+    elif args.command == "tool" and args.tool_command == "httpx":
+        cmd_tool_httpx(args)
     elif args.command == "artifact" and args.artifact_command == "cat":
         cmd_artifact_cat(args)
     elif args.command == "artifact" and args.artifact_command == "verify":
