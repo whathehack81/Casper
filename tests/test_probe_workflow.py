@@ -1,5 +1,5 @@
 from casper.core.runtime import CasperRuntime
-from casper.rules.engine import Rule
+from casper.rules.builtin import successful_probe_rule
 
 
 def test_probe_evidence_allows_advancement(tmp_path):
@@ -17,17 +17,6 @@ def test_probe_evidence_allows_advancement(tmp_path):
         },
     )
 
-    runtime.register_rule(
-        Rule(
-            name="successful probe evidence exists",
-            check=lambda: any(
-                entry.source == "http-probe"
-                and entry.content.get("ok") is True
-                for entry in runtime.evidence.all()
-            ),
-            pass_reason="successful probe evidence exists",
-            fail_reason="missing successful probe evidence",
-        )
-    )
+    runtime.register_rule(successful_probe_rule(runtime.evidence))
 
     assert runtime.validate() is True
