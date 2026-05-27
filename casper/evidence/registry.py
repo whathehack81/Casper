@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from hashlib import sha256
+from pathlib import Path
 import json
 
 
@@ -15,7 +16,8 @@ class Evidence:
 
 
 class EvidenceRegistry:
-    def __init__(self) -> None:
+    def __init__(self, workspace: Path | None = None) -> None:
+        self.workspace = workspace
         self._entries: list[Evidence] = []
 
     def add(self, source: str, content: dict) -> Evidence:
@@ -39,6 +41,7 @@ class EvidenceRegistry:
         )
 
         self._entries.append(evidence)
+        self._persist()
 
         return evidence
 
@@ -47,3 +50,14 @@ class EvidenceRegistry:
 
     def export(self) -> list[dict]:
         return [asdict(entry) for entry in self._entries]
+
+    def _persist(self) -> None:
+        if self.workspace is None:
+            return
+
+        evidence_dir = self.workspace / "evidence"
+        evidence_dir.mkdir(parents=True, exist_ok=True)
+
+        output = evidence_dir / "index.json"
+        with output.open("w", encoding="utf-8") as handle:
+            json.dump(self.export(), handle, indent=4, sort_keys=True)

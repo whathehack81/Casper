@@ -16,3 +16,11 @@ def test_registry_add():
 
     assert len(exported) == 1
     assert exported[0]["evidence_id"]
+
+
+def test_registry_saves_evidence_index(tmp_path):
+    registry = EvidenceRegistry(tmp_path)
+
+    registry.add("unit-test", {"signal": "persist"})
+
+    assert (tmp_path / "evidence" / "index.json").exists()
