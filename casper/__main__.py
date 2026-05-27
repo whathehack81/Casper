@@ -14,6 +14,7 @@ from casper.runtime.manifest import build_manifest, write_manifest
 from casper.events.store import EventStore
 from casper.workers.worker import create_worker
 from casper.replay.replay import replay_digest
+from casper.projections.session_projection import rebuild_session
 
 
 def build_runtime() -> CasperRuntime:
@@ -352,6 +353,19 @@ def cmd_replay_digest() -> None:
         "digest": digest,
     })
 
+
+
+def cmd_replay_project() -> None:
+    store = EventStore(Path(".casper"))
+
+    projection = rebuild_session(store.all())
+
+    print_json({
+        "event_count": projection.event_count,
+        "run_ids": projection.run_ids,
+        "evidence_ids": projection.evidence_ids,
+    })
+
 def main() -> None:
 
     manifest = build_manifest(sys.argv)
@@ -368,6 +382,7 @@ def main() -> None:
     replay = sub.add_parser("replay")
     replay_sub = replay.add_subparsers(dest="replay_command")
     replay_sub.add_parser("digest")
+    replay_sub.add_parser("project")
 
     tool = sub.add_parser("tool")
     tool_sub = tool.add_subparsers(dest="tool_command")
@@ -434,6 +449,8 @@ def main() -> None:
         cmd_validate()
     elif args.command == "replay" and args.replay_command == "digest":
         cmd_replay_digest()
+    elif args.command == "replay" and args.replay_command == "project":
+        cmd_replay_project()
     elif args.command == "tool" and args.tool_command == "httpx":
         cmd_tool_httpx(args)
     elif args.command == "artifact" and args.artifact_command == "cat":
