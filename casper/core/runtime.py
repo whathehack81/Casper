@@ -33,6 +33,11 @@ class CasperRuntime:
         except FileNotFoundError:
             self.session = self.sessions.create()
 
+        try:
+            self.evidence.load()
+        except FileNotFoundError:
+            pass
+
         return self.session
 
     def register_rule(self, rule: Any) -> None:

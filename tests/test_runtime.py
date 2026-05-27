@@ -43,3 +43,16 @@ def test_runtime_records_persistent_evidence(tmp_path):
     )
 
     assert (tmp_path / "evidence" / "index.json").exists()
+
+
+def test_runtime_loads_existing_evidence(tmp_path):
+    first = CasperRuntime(tmp_path)
+    first.record_evidence(
+        source="runtime",
+        content={"signal": "resume"},
+    )
+
+    second = CasperRuntime(tmp_path)
+    second.initialize()
+
+    assert len(second.evidence.all()) == 1

@@ -61,3 +61,15 @@ class EvidenceRegistry:
         output = evidence_dir / "index.json"
         with output.open("w", encoding="utf-8") as handle:
             json.dump(self.export(), handle, indent=4, sort_keys=True)
+
+    def load(self) -> list[Evidence]:
+        if self.workspace is None:
+            return []
+
+        input_path = self.workspace / "evidence" / "index.json"
+
+        with input_path.open("r", encoding="utf-8") as handle:
+            data = json.load(handle)
+
+        self._entries = [Evidence(**entry) for entry in data]
+        return self.all()

@@ -24,3 +24,13 @@ def test_registry_saves_evidence_index(tmp_path):
     registry.add("unit-test", {"signal": "persist"})
 
     assert (tmp_path / "evidence" / "index.json").exists()
+
+
+def test_registry_loads_existing_evidence_index(tmp_path):
+    first = EvidenceRegistry(tmp_path)
+    created = first.add("unit-test", {"signal": "reload"})
+
+    second = EvidenceRegistry(tmp_path)
+    second.load()
+
+    assert second.all() == [created]
