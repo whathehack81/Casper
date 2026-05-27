@@ -28,7 +28,11 @@ class CasperRuntime:
         self.session: SessionState | None = None
 
     def initialize(self) -> SessionState:
-        self.session = self.sessions.create()
+        try:
+            self.session = self.sessions.load()
+        except FileNotFoundError:
+            self.session = self.sessions.create()
+
         return self.session
 
     def register_rule(self, rule: Any) -> None:
