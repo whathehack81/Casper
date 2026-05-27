@@ -43,12 +43,24 @@ def cmd_cmd(args: argparse.Namespace) -> None:
     result = run_command(command)
     exported = export_result(result)
     artifacts = persist_artifacts(result, runtime.workspace)
-    exported.update(artifacts)
+
+    evidence_payload = {
+        "command": exported["command"],
+        "exit_code": exported["exit_code"],
+        "timestamp": exported["timestamp"],
+        "sha256": exported["sha256"],
+        "stdout_path": artifacts["stdout_path"],
+        "stderr_path": artifacts["stderr_path"],
+        "stdout_bytes": len(result.stdout.encode()),
+        "stderr_bytes": len(result.stderr.encode()),
+    }
 
     evidence = runtime.record_evidence(
         source="command-exec",
-        content=exported,
+        content=evidence_payload,
     )
+
+    exported = evidence_payload
     exported["evidence_id"] = evidence.evidence_id
 
     print_json(exported)
