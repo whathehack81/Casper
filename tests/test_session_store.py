@@ -17,3 +17,14 @@ def test_session_store_load(tmp_path):
     loaded = store.load()
 
     assert loaded == created
+
+
+def test_session_store_load_missing_file(tmp_path):
+    store = SessionStore(tmp_path)
+
+    try:
+        store.load()
+    except FileNotFoundError:
+        assert True
+    else:
+        assert False
