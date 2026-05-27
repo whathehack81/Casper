@@ -11,7 +11,9 @@ from casper.tools.executor import export_result, persist_artifacts, run_command
 from casper.tools.http_probe import probe_url
 from pathlib import Path
 from casper.runtime.manifest import build_manifest, write_manifest
+from casper.events.store import EventStore
 from casper.workers.worker import create_worker
+from casper.replay.replay import replay_digest
 
 
 def build_runtime() -> CasperRuntime:
@@ -339,6 +341,17 @@ def cmd_tool_httpx(args: argparse.Namespace) -> None:
 
     print_json(evidence_payload)
 
+
+
+def cmd_replay_digest() -> None:
+    store = EventStore(Path(".casper"))
+    digest = replay_digest(store.all())
+
+    print_json({
+        "event_count": len(store.all()),
+        "digest": digest,
+    })
+
 def main() -> None:
 
     manifest = build_manifest(sys.argv)
@@ -351,6 +364,10 @@ def main() -> None:
     sub.add_parser("status")
     sub.add_parser("report")
     sub.add_parser("validate")
+
+    replay = sub.add_parser("replay")
+    replay_sub = replay.add_subparsers(dest="replay_command")
+    replay_sub.add_parser("digest")
 
     tool = sub.add_parser("tool")
     tool_sub = tool.add_subparsers(dest="tool_command")
@@ -415,6 +432,8 @@ def main() -> None:
         cmd_report()
     elif args.command == "validate":
         cmd_validate()
+    elif args.command == "replay" and args.replay_command == "digest":
+        cmd_replay_digest()
     elif args.command == "tool" and args.tool_command == "httpx":
         cmd_tool_httpx(args)
     elif args.command == "artifact" and args.artifact_command == "cat":
