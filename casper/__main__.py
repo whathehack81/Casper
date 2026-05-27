@@ -103,12 +103,22 @@ def cmd_report() -> None:
     runtime = build_runtime()
     session = runtime.initialize()
 
+    try:
+        target = runtime.load_target()
+        target_payload = {
+            "name": target.name,
+            "scope": target.scope,
+        }
+    except FileNotFoundError:
+        target_payload = None
+
     payload = {
         "session": {
             "session_id": session.session_id,
             "started_at": session.started_at,
             "status": session.status,
         },
+        "target": target_payload,
         "evidence_count": len(runtime.evidence.all()),
         "findings_count": len(runtime.findings.all()),
         "findings": runtime.findings.export(),
