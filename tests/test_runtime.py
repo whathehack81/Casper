@@ -32,3 +32,14 @@ def test_runtime_reuses_existing_session(tmp_path):
     loaded = second.initialize()
 
     assert loaded == created
+
+
+def test_runtime_records_persistent_evidence(tmp_path):
+    runtime = CasperRuntime(tmp_path)
+
+    runtime.record_evidence(
+        source="runtime",
+        content={"signal": "persistent"},
+    )
+
+    assert (tmp_path / "evidence" / "index.json").exists()

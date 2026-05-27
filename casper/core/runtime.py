@@ -22,7 +22,7 @@ class CasperRuntime:
         self.workspace.mkdir(parents=True, exist_ok=True)
 
         self.rules = RuleEngine()
-        self.evidence = EvidenceRegistry()
+        self.evidence = EvidenceRegistry(workspace)
         self.sessions = SessionStore(workspace)
 
         self.session: SessionState | None = None
