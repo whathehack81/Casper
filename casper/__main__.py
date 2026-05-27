@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from casper.core.runtime import CasperRuntime
+from casper.tools.http_probe import probe_url
 
 
 def build_runtime() -> CasperRuntime:
@@ -153,12 +154,36 @@ def cmd_target_show() -> None:
         "scope": target.scope,
     }, indent=2, sort_keys=True))
 
+
+def cmd_run_probe(args: argparse.Namespace) -> None:
+    runtime = build_runtime()
+    runtime.initialize()
+
+    result = probe_url(args.url)
+
+    evidence = runtime.record_evidence(
+        source="http-probe",
+        content=result,
+    )
+
+    print(json.dumps({
+        "evidence_id": evidence.evidence_id,
+        "source": evidence.source,
+        "content": evidence.content,
+    }, indent=2, sort_keys=True))
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="casper")
     sub = parser.add_subparsers(dest="command")
 
     sub.add_parser("status")
     sub.add_parser("report")
+
+    run = sub.add_parser("run")
+    run_sub = run.add_subparsers(dest="run_command")
+
+    probe = run_sub.add_parser("probe")
+    probe.add_argument("--url", required=True)
 
     target = sub.add_parser("target")
     target_sub = target.add_subparsers(dest="target_command")
@@ -199,6 +224,8 @@ def main() -> None:
         cmd_status()
     elif args.command == "report":
         cmd_report()
+    elif args.command == "run" and args.run_command == "probe":
+        cmd_run_probe(args)
     elif args.command == "target" and args.target_command == "set":
         cmd_target_set(args)
     elif args.command == "target" and args.target_command == "show":
