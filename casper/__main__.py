@@ -6,7 +6,7 @@ from pathlib import Path
 
 from casper.core.runtime import CasperRuntime
 from casper.rules.builtin import successful_probe_rule
-from casper.tools.executor import export_result, run_command
+from casper.tools.executor import export_result, persist_artifacts, run_command
 from casper.tools.http_probe import probe_url
 
 
@@ -42,6 +42,8 @@ def cmd_cmd(args: argparse.Namespace) -> None:
 
     result = run_command(command)
     exported = export_result(result)
+    artifacts = persist_artifacts(result, runtime.workspace)
+    exported.update(artifacts)
 
     evidence = runtime.record_evidence(
         source="command-exec",
