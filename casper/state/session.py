@@ -6,7 +6,7 @@ Tracks one deterministic runtime session.
 
 from dataclasses import dataclass, asdict
 from pathlib import Path
-from datetime import datetime
+from datetime import UTC, datetime
 import json
 
 
@@ -23,7 +23,7 @@ class SessionStore:
         self.state_dir = workspace / "state"
 
     def create(self) -> SessionState:
-        timestamp = datetime.utcnow()
+        timestamp = datetime.now(UTC)
 
         session = SessionState(
             session_id=timestamp.strftime("%Y%m%d-%H%M%S"),
@@ -36,6 +36,7 @@ class SessionStore:
         return session
 
     def _store(self, session: SessionState) -> None:
+        self.state_dir.mkdir(parents=True, exist_ok=True)
         output = self.state_dir / "session.json"
 
         with output.open("w", encoding="utf-8") as handle:
