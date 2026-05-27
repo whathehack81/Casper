@@ -98,11 +98,30 @@ def cmd_finding_link_evidence(args: argparse.Namespace) -> None:
         "evidence_ids": finding.evidence_ids,
     }, indent=2, sort_keys=True))
 
+
+def cmd_report() -> None:
+    runtime = build_runtime()
+    session = runtime.initialize()
+
+    payload = {
+        "session": {
+            "session_id": session.session_id,
+            "started_at": session.started_at,
+            "status": session.status,
+        },
+        "evidence_count": len(runtime.evidence.all()),
+        "findings_count": len(runtime.findings.all()),
+        "findings": runtime.findings.export(),
+    }
+
+    print(json.dumps(payload, indent=2, sort_keys=True))
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="casper")
     sub = parser.add_subparsers(dest="command")
 
     sub.add_parser("status")
+    sub.add_parser("report")
 
     finding = sub.add_parser("finding")
     finding_sub = finding.add_subparsers(dest="finding_command")
@@ -132,6 +151,8 @@ def main() -> None:
 
     if args.command in (None, "status"):
         cmd_status()
+    elif args.command == "report":
+        cmd_report()
     elif args.command == "evidence" and args.evidence_command == "add":
         cmd_evidence_add(args)
     elif args.command == "evidence" and args.evidence_command == "list":
