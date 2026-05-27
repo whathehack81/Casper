@@ -157,6 +157,28 @@ def cmd_validate() -> None:
     })
 
 
+
+def artifact_health(runtime: CasperRuntime) -> list[dict]:
+    checks = []
+
+    for entry in runtime.evidence.all():
+        content = entry.content
+        if entry.source != "command-exec":
+            continue
+
+        stdout_path = Path(content["stdout_path"])
+        stderr_path = Path(content["stderr_path"])
+
+        checks.append({
+            "evidence_id": entry.evidence_id,
+            "sha256": content["sha256"],
+            "stdout_exists": stdout_path.exists(),
+            "stderr_exists": stderr_path.exists(),
+            "valid": stdout_path.exists() and stderr_path.exists(),
+        })
+
+    return checks
+
 def cmd_report() -> None:
     runtime = build_runtime()
     session = runtime.initialize()
@@ -189,6 +211,7 @@ def cmd_report() -> None:
         "evidence_count": len(runtime.evidence.all()),
         "findings_count": len(runtime.findings.all()),
         "findings": runtime.findings.export(),
+        "artifact_health": artifact_health(runtime),
     })
 
 
