@@ -380,6 +380,33 @@ def cmd_worker_create(args) -> None:
         "lane": worker.lane,
     })
 
+
+
+def cmd_worker_start(args) -> None:
+    store = EventStore(Path(".casper"))
+
+    worker = create_worker(
+        run_id=args.run_id,
+        lane=args.lane,
+    )
+
+    event = store.append(
+        event_type="worker.started",
+        payload={
+            "worker_id": worker.worker_id,
+            "run_id": worker.run_id,
+            "lane": worker.lane,
+        },
+    )
+
+    print_json({
+        "event_type": event.event_type,
+        "worker_id": worker.worker_id,
+        "run_id": worker.run_id,
+        "lane": worker.lane,
+        "timestamp": event.timestamp,
+    })
+
 def main() -> None:
 
     manifest = build_manifest(sys.argv)
@@ -400,6 +427,10 @@ def main() -> None:
     worker_create = worker_sub.add_parser("create")
     worker_create.add_argument("--run-id", required=True)
     worker_create.add_argument("--lane", required=True)
+
+    worker_start = worker_sub.add_parser("start")
+    worker_start.add_argument("--run-id", required=True)
+    worker_start.add_argument("--lane", required=True)
     replay_sub = replay.add_subparsers(dest="replay_command")
     replay_sub.add_parser("digest")
     replay_sub.add_parser("project")
@@ -474,6 +505,8 @@ def main() -> None:
         cmd_replay_project()
     elif args.command == "worker" and args.worker_command == "create":
         cmd_worker_create(args)
+    elif args.command == "worker" and args.worker_command == "start":
+        cmd_worker_start(args)
     elif args.command == "tool" and args.tool_command == "httpx":
         cmd_tool_httpx(args)
     elif args.command == "artifact" and args.artifact_command == "cat":
