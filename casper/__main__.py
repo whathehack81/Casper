@@ -366,6 +366,20 @@ def cmd_replay_project() -> None:
         "evidence_ids": projection.evidence_ids,
     })
 
+
+
+def cmd_worker_create(args) -> None:
+    worker = create_worker(
+        run_id=args.run_id,
+        lane=args.lane,
+    )
+
+    print_json({
+        "worker_id": worker.worker_id,
+        "run_id": worker.run_id,
+        "lane": worker.lane,
+    })
+
 def main() -> None:
 
     manifest = build_manifest(sys.argv)
@@ -380,6 +394,12 @@ def main() -> None:
     sub.add_parser("validate")
 
     replay = sub.add_parser("replay")
+    worker = sub.add_parser("worker")
+    worker_sub = worker.add_subparsers(dest="worker_command")
+
+    worker_create = worker_sub.add_parser("create")
+    worker_create.add_argument("--run-id", required=True)
+    worker_create.add_argument("--lane", required=True)
     replay_sub = replay.add_subparsers(dest="replay_command")
     replay_sub.add_parser("digest")
     replay_sub.add_parser("project")
@@ -437,7 +457,8 @@ def main() -> None:
     evidence_sub.add_parser("list")
 
     args = parser.parse_args()
-    setattr(args, "run_id", manifest.run_id)
+    if not hasattr(args, "run_id") or args.run_id is None:
+        args.run_id = manifest.run_id
 
     if args.command in (None, "status"):
         cmd_status()
@@ -451,6 +472,8 @@ def main() -> None:
         cmd_replay_digest()
     elif args.command == "replay" and args.replay_command == "project":
         cmd_replay_project()
+    elif args.command == "worker" and args.worker_command == "create":
+        cmd_worker_create(args)
     elif args.command == "tool" and args.tool_command == "httpx":
         cmd_tool_httpx(args)
     elif args.command == "artifact" and args.artifact_command == "cat":
