@@ -244,6 +244,24 @@ def cmd_finding_list() -> None:
     print_json(runtime.export_findings())
 
 
+def cmd_finding_status(args: argparse.Namespace) -> None:
+    runtime = build_runtime()
+    runtime.initialize()
+
+    try:
+        finding = runtime.set_finding_status(args.title, args.status)
+    except ValueError as exc:
+        raise SystemExit(f"error: {exc}") from None
+
+    print_json({
+        "title": finding.title,
+        "severity": finding.severity,
+        "target": finding.target,
+        "status": finding.status,
+        "evidence_ids": finding.evidence_ids,
+    })
+
+
 def cmd_finding_link_evidence(args: argparse.Namespace) -> None:
     runtime = build_runtime()
     runtime.initialize()
@@ -488,6 +506,13 @@ def main() -> None:
     finding_link = finding_sub.add_parser("link-evidence")
     finding_link.add_argument("--title", required=True)
     finding_link.add_argument("--evidence-id", required=True)
+    finding_status = finding_sub.add_parser("status")
+    finding_status.add_argument("--title", required=True)
+    finding_status.add_argument(
+        "--status",
+        required=True,
+        choices=["new", "blocked", "ready", "submitted"],
+    )
 
     evidence = sub.add_parser("evidence")
     evidence_sub = evidence.add_subparsers(dest="evidence_command")
@@ -540,6 +565,8 @@ def main() -> None:
         cmd_finding_list()
     elif args.command == "finding" and args.finding_command == "link-evidence":
         cmd_finding_link_evidence(args)
+    elif args.command == "finding" and args.finding_command == "status":
+        cmd_finding_status(args)
     elif args.command == "evidence" and args.evidence_command == "add":
         cmd_evidence_add(args)
     elif args.command == "evidence" and args.evidence_command == "list":

@@ -60,6 +60,19 @@ class FindingStore:
                 sort_keys=True,
             )
 
+    def set_status(
+        self,
+        title: str,
+        status: str,
+    ) -> Finding:
+        for finding in self._findings:
+            if finding.title == title:
+                finding.status = status
+                self._persist()
+                return finding
+
+        raise ValueError(f"finding not found: {title}")
+
     def link_evidence(
         self,
         title: str,

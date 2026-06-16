@@ -105,6 +105,15 @@ class CasperRuntime:
             evidence_id=evidence_id,
         )
 
+    def set_finding_status(self, title: str, status: str) -> Finding:
+        allowed_statuses = {"new", "blocked", "ready", "submitted"}
+
+        if status not in allowed_statuses:
+            allowed = ", ".join(sorted(allowed_statuses))
+            raise ValueError(f"invalid status: {status}; expected one of: {allowed}")
+
+        return self.findings.set_status(title=title, status=status)
+
     def export_findings(self) -> list[dict]:
         evidence_by_id = {
             entry.evidence_id: {
