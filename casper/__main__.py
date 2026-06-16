@@ -9,7 +9,6 @@ from casper.core.runtime import CasperRuntime
 from casper.rules.builtin import successful_probe_rule
 from casper.tools.executor import export_result, persist_artifacts, run_command
 from casper.tools.http_probe import probe_url
-from pathlib import Path
 from casper.runtime.manifest import build_manifest, write_manifest
 from casper.events.store import EventStore
 from casper.workers.worker import create_worker

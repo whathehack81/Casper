@@ -10,11 +10,17 @@ class AdvancementRules:
 
     def evidence_kinds(self, finding: Any) -> set[str]:
         evidence = getattr(finding, "evidence", [])
-        return {
-            item.get("kind")
-            for item in evidence
-            if isinstance(item, dict) and item.get("kind")
-        }
+        kinds: set[str] = set()
+
+        for item in evidence:
+            if not isinstance(item, dict):
+                continue
+
+            kind = item.get("kind")
+            if isinstance(kind, str):
+                kinds.add(kind)
+
+        return kinds
 
     def missing_requirements(self, finding: Any) -> List[str]:
         kinds = self.evidence_kinds(finding)
