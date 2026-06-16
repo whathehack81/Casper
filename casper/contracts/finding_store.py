@@ -16,11 +16,13 @@ class FindingStore:
         self,
         title: str,
         severity: str,
+        target: str | None = None,
     ) -> Finding:
 
         finding = Finding(
             title=title,
             severity=severity,
+            target=target,
         )
 
         self._findings.append(finding)

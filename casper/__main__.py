@@ -224,10 +224,16 @@ def cmd_report() -> None:
 def cmd_finding_create(args: argparse.Namespace) -> None:
     runtime = build_runtime()
     runtime.initialize()
-    finding = runtime.create_finding(args.title, args.severity)
+    finding = runtime.create_finding(
+        title=args.title,
+        severity=args.severity,
+        target=args.target,
+    )
     print_json({
         "title": finding.title,
         "severity": finding.severity,
+        "target": finding.target,
+        "status": finding.status,
         "evidence_ids": finding.evidence_ids,
     })
 
@@ -472,6 +478,7 @@ def main() -> None:
     finding_create = finding_sub.add_parser("create")
     finding_create.add_argument("--title", required=True)
     finding_create.add_argument("--severity", required=True)
+    finding_create.add_argument("--target")
     finding_sub.add_parser("list")
     finding_link = finding_sub.add_parser("link-evidence")
     finding_link.add_argument("--title", required=True)
