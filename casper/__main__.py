@@ -216,7 +216,7 @@ def cmd_report() -> None:
         ],
         "evidence_count": len(runtime.evidence.all()),
         "findings_count": len(runtime.findings.all()),
-        "findings": runtime.findings.export(),
+        "findings": runtime.export_findings(),
         "artifact_health": artifact_health(runtime),
     })
 
@@ -241,7 +241,7 @@ def cmd_finding_create(args: argparse.Namespace) -> None:
 def cmd_finding_list() -> None:
     runtime = build_runtime()
     runtime.initialize()
-    print_json(runtime.findings.export())
+    print_json(runtime.export_findings())
 
 
 def cmd_finding_link_evidence(args: argparse.Namespace) -> None:

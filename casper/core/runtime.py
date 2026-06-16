@@ -105,6 +105,30 @@ class CasperRuntime:
             evidence_id=evidence_id,
         )
 
+    def export_findings(self) -> list[dict]:
+        evidence_by_id = {
+            entry.evidence_id: {
+                "evidence_id": entry.evidence_id,
+                "timestamp": entry.timestamp,
+                "source": entry.source,
+                "content": entry.content,
+            }
+            for entry in self.evidence.all()
+        }
+
+        hydrated = []
+
+        for finding in self.findings.export():
+            evidence_ids = finding.get("evidence_ids", [])
+            finding["evidence"] = [
+                evidence_by_id[evidence_id]
+                for evidence_id in evidence_ids
+                if evidence_id in evidence_by_id
+            ]
+            hydrated.append(finding)
+
+        return hydrated
+
 
     def set_target(
         self,
