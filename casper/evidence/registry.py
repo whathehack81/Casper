@@ -51,6 +51,12 @@ class EvidenceRegistry:
     def all(self) -> list[Evidence]:
         return list(self._entries)
 
+    def exists(self, evidence_id: str) -> bool:
+        return any(
+            entry.evidence_id == evidence_id
+            for entry in self._entries
+        )
+
     def export(self) -> list[dict]:
         return [asdict(entry) for entry in self._entries]
 
