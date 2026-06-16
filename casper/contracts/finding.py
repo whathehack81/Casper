@@ -7,6 +7,8 @@ class Finding:
     title: str
     severity: str = "informational"
     target: Optional[str] = None
+    status: str = "new"
+    notes: List[str] = field(default_factory=list)
     evidence: List[Dict[str, Any]] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
     evidence_ids: List[str] = field(default_factory=list)

@@ -8,10 +8,21 @@ class AdvancementRules:
     min_confidence: float = 0.0
     metadata: Dict[str, Any] = field(default_factory=dict)
 
-    def allows(self, finding: Any) -> bool:
-        if not self.required_evidence:
-            return True
-
+    def evidence_kinds(self, finding: Any) -> set[str]:
         evidence = getattr(finding, "evidence", [])
-        kinds = {item.get("kind") for item in evidence if isinstance(item, dict)}
-        return all(kind in kinds for kind in self.required_evidence)
+        return {
+            item.get("kind")
+            for item in evidence
+            if isinstance(item, dict) and item.get("kind")
+        }
+
+    def missing_requirements(self, finding: Any) -> List[str]:
+        kinds = self.evidence_kinds(finding)
+        return [
+            required
+            for required in self.required_evidence
+            if required not in kinds
+        ]
+
+    def allows(self, finding: Any) -> bool:
+        return not self.missing_requirements(finding)
