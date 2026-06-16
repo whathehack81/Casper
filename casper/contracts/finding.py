@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 @dataclass
 class Finding:
     title: str
+    finding_id: str | None = None
     severity: str = "informational"
     target: Optional[str] = None
     status: str = "new"

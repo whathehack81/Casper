@@ -231,9 +231,10 @@ def cmd_finding_create(args: argparse.Namespace) -> None:
     )
     print_json({
         "title": finding.title,
+        "finding_id": finding.finding_id,
         "severity": finding.severity,
-        "target": finding.target,
         "status": finding.status,
+        "target": finding.target,
         "evidence_ids": finding.evidence_ids,
     })
 
@@ -244,17 +245,28 @@ def cmd_finding_list() -> None:
     print_json(runtime.export_findings())
 
 
+def require_finding_selector(args: argparse.Namespace) -> None:
+    if bool(args.title) == bool(args.finding_id):
+        raise SystemExit("error: provide exactly one of --title or --finding-id")
+
+
 def cmd_finding_status(args: argparse.Namespace) -> None:
+    require_finding_selector(args)
     runtime = build_runtime()
     runtime.initialize()
 
     try:
-        finding = runtime.set_finding_status(args.title, args.status)
+        finding = runtime.set_finding_status(
+            title=args.title,
+            finding_id=args.finding_id,
+            status=args.status,
+        )
     except ValueError as exc:
         raise SystemExit(f"error: {exc}") from None
 
     print_json({
         "title": finding.title,
+        "finding_id": finding.finding_id,
         "severity": finding.severity,
         "target": finding.target,
         "status": finding.status,
@@ -263,16 +275,22 @@ def cmd_finding_status(args: argparse.Namespace) -> None:
 
 
 def cmd_finding_link_evidence(args: argparse.Namespace) -> None:
+    require_finding_selector(args)
     runtime = build_runtime()
     runtime.initialize()
 
     try:
-        finding = runtime.link_finding_evidence(args.title, args.evidence_id)
+        finding = runtime.link_finding_evidence(
+            title=args.title,
+            finding_id=args.finding_id,
+            evidence_id=args.evidence_id,
+        )
     except ValueError as exc:
         raise SystemExit(f"error: {exc}") from None
 
     print_json({
         "title": finding.title,
+        "finding_id": finding.finding_id,
         "severity": finding.severity,
         "evidence_ids": finding.evidence_ids,
     })
@@ -504,16 +522,17 @@ def main() -> None:
     finding_create.add_argument("--target")
     finding_sub.add_parser("list")
     finding_link = finding_sub.add_parser("link-evidence")
-    finding_link.add_argument("--title", required=True)
+    finding_link.add_argument("--title")
+    finding_link.add_argument("--finding-id")
     finding_link.add_argument("--evidence-id", required=True)
     finding_status = finding_sub.add_parser("status")
-    finding_status.add_argument("--title", required=True)
+    finding_status.add_argument("--title")
+    finding_status.add_argument("--finding-id")
     finding_status.add_argument(
         "--status",
         required=True,
         choices=["new", "blocked", "ready", "submitted"],
     )
-
     evidence = sub.add_parser("evidence")
     evidence_sub = evidence.add_subparsers(dest="evidence_command")
     evidence_add = evidence_sub.add_parser("add")
