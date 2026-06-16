@@ -246,6 +246,7 @@ def cmd_finding_list() -> None:
 
 def cmd_finding_link_evidence(args: argparse.Namespace) -> None:
     runtime = build_runtime()
+    runtime.initialize()
 
     try:
         finding = runtime.link_finding_evidence(args.title, args.evidence_id)
