@@ -5,8 +5,11 @@ from casper.contracts.rules import AdvancementRules
 
 
 class Gatekeeper:
+    def __init__(self, rules: AdvancementRules | None = None) -> None:
+        self.rules = rules or AdvancementRules()
+
     def evaluate(self, finding: Finding) -> Finding:
-        missing = AdvancementRules.missing_requirements(finding)
+        missing = self.rules.missing_requirements(finding)
 
         if missing:
             finding.status = "blocked"
