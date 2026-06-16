@@ -97,6 +97,9 @@ class CasperRuntime:
         title: str,
         evidence_id: str,
     ) -> Finding:
+        if not self.evidence.exists(evidence_id):
+            raise ValueError(f"evidence not found: {evidence_id}")
+
         return self.findings.link_evidence(
             title=title,
             evidence_id=evidence_id,
