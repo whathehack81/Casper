@@ -96,13 +96,20 @@ def cmd_evidence_list() -> None:
 def cmd_evidence_add(args: argparse.Namespace) -> None:
     runtime = build_runtime()
     runtime.initialize()
+
+    content = {
+        "target": args.target,
+        "observation": args.observation,
+        "evidence_type": args.type,
+        "result": args.result,
+    }
+
+    if args.status is not None:
+        content["status"] = args.status
+
     evidence = runtime.record_evidence(
         source=args.source,
-        content={
-            "target": args.target,
-            "status": args.status,
-            "observation": args.observation,
-        },
+        content=content,
     )
     print_json({
         "evidence_id": evidence.evidence_id,
@@ -599,7 +606,17 @@ def main() -> None:
     evidence_add = evidence_sub.add_parser("add")
     evidence_add.add_argument("--source", required=True)
     evidence_add.add_argument("--target", required=True)
-    evidence_add.add_argument("--status", type=int, required=True)
+    evidence_add.add_argument("--status", type=int)
+    evidence_add.add_argument(
+        "--type",
+        default="manual",
+        choices=["manual", "http", "command", "code", "patch", "metadata"],
+    )
+    evidence_add.add_argument(
+        "--result",
+        default="observed",
+        choices=["observed", "blocked", "confirmed", "failed"],
+    )
     evidence_add.add_argument("--observation", required=True)
     evidence_sub.add_parser("list")
 
