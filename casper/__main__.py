@@ -344,9 +344,30 @@ def cmd_workspace_reset() -> None:
 
 
 
+def resolve_artifact_sha(args: argparse.Namespace) -> str:
+    if bool(getattr(args, "sha256", None)) == bool(getattr(args, "evidence_id", None)):
+        raise SystemExit("error: provide exactly one of --sha256 or --evidence-id")
+
+    if args.sha256:
+        return args.sha256
+
+    runtime = build_runtime()
+    runtime.initialize()
+
+    for entry in runtime.evidence.all():
+        if entry.evidence_id == args.evidence_id:
+            sha256 = entry.content.get("sha256")
+            if not sha256:
+                raise SystemExit(f"evidence has no artifact sha256: {args.evidence_id}")
+            return sha256
+
+    raise SystemExit(f"evidence not found: {args.evidence_id}")
+
+
 def cmd_artifact_cat(args: argparse.Namespace) -> None:
     workspace = Path.cwd() / ".casper"
-    path = workspace / "artifacts" / f"{args.sha256}.{args.stream}"
+    sha256 = resolve_artifact_sha(args)
+    path = workspace / "artifacts" / f"{sha256}.{args.stream}"
 
     if not path.exists():
         raise SystemExit(f"artifact not found: {path}")
@@ -356,12 +377,13 @@ def cmd_artifact_cat(args: argparse.Namespace) -> None:
 
 def cmd_artifact_verify(args: argparse.Namespace) -> None:
     workspace = Path.cwd() / ".casper"
+    sha256 = resolve_artifact_sha(args)
 
-    stdout_path = workspace / "artifacts" / f"{args.sha256}.stdout"
-    stderr_path = workspace / "artifacts" / f"{args.sha256}.stderr"
+    stdout_path = workspace / "artifacts" / f"{sha256}.stdout"
+    stderr_path = workspace / "artifacts" / f"{sha256}.stderr"
 
     payload = {
-        "sha256": args.sha256,
+        "sha256": sha256,
         "stdout_exists": stdout_path.exists(),
         "stderr_exists": stderr_path.exists(),
     }
@@ -522,8 +544,10 @@ def main() -> None:
     artifact_sub = artifact.add_subparsers(dest="artifact_command")
     artifact_cat = artifact_sub.add_parser("cat")
     artifact_verify = artifact_sub.add_parser("verify")
-    artifact_verify.add_argument("--sha256", required=True)
-    artifact_cat.add_argument("--sha256", required=True)
+    artifact_verify.add_argument("--sha256")
+    artifact_verify.add_argument("--evidence-id")
+    artifact_cat.add_argument("--sha256")
+    artifact_cat.add_argument("--evidence-id")
     artifact_cat.add_argument("--stream", choices=["stdout", "stderr"], required=True)
 
     cmd_parser = sub.add_parser("cmd")
