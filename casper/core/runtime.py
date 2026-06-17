@@ -154,8 +154,9 @@ class CasperRuntime:
         self,
         name: str,
         scope: str,
+        mode: str = "web",
     ) -> TargetState:
-        return self.targets.set(name=name, scope=scope)
+        return self.targets.set(name=name, scope=scope, mode=mode)
 
     def load_target(self) -> TargetState:
         return self.targets.load()

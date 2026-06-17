@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from casper.core.runtime import CasperRuntime
-from casper.rules.builtin import successful_probe_rule
+from casper.rules.builtin import code_review_rule, successful_probe_rule
 from casper.tools.executor import export_result, persist_artifacts, run_command
 from casper.tools.http_probe import probe_url
 from casper.runtime.manifest import build_manifest, write_manifest
@@ -22,6 +22,21 @@ def build_runtime() -> CasperRuntime:
 
 def print_json(payload: dict | list) -> None:
     print(json.dumps(payload, indent=2, sort_keys=True))
+
+
+def register_profile_rules(runtime: CasperRuntime, mode: str | None) -> str:
+    selected = mode or "web"
+
+    if selected in {"web", "api", "mobile"}:
+        runtime.register_rule(successful_probe_rule(runtime.evidence))
+        return "web-live-basic"
+
+    if selected in {"code", "blockchain"}:
+        runtime.register_rule(code_review_rule(runtime.evidence, runtime.findings))
+        return "code-review-basic"
+
+    runtime.register_rule(successful_probe_rule(runtime.evidence))
+    return "web-live-basic"
 
 
 def cmd_status() -> None:
@@ -99,15 +114,19 @@ def cmd_evidence_add(args: argparse.Namespace) -> None:
 def cmd_target_set(args: argparse.Namespace) -> None:
     runtime = build_runtime()
     runtime.initialize()
-    target = runtime.set_target(args.name, args.scope)
-    print_json({"name": target.name, "scope": target.scope})
+    try:
+        target = runtime.set_target(args.name, args.scope, args.mode)
+    except ValueError as exc:
+        raise SystemExit(f"error: {exc}") from None
+
+    print_json({"name": target.name, "scope": target.scope, "mode": target.mode})
 
 
 def cmd_target_show() -> None:
     runtime = build_runtime()
     runtime.initialize()
     target = runtime.load_target()
-    print_json({"name": target.name, "scope": target.scope})
+    print_json({"name": target.name, "scope": target.scope, "mode": target.mode})
 
 
 def cmd_run_probe(args: argparse.Namespace) -> None:
@@ -134,7 +153,11 @@ def cmd_run_target() -> None:
     result = probe_url(url)
     evidence = runtime.record_evidence("http-probe", result)
 
-    runtime.register_rule(successful_probe_rule(runtime.evidence))
+    if target_payload is None:
+        profile = register_profile_rules(runtime, "web")
+    else:
+        profile = register_profile_rules(runtime, target.mode)
+
     can_advance = runtime.validate()
 
     print_json({
@@ -148,9 +171,15 @@ def cmd_run_target() -> None:
 def cmd_validate() -> None:
     runtime = build_runtime()
     runtime.initialize()
-    runtime.register_rule(successful_probe_rule(runtime.evidence))
+
+    try:
+        target = runtime.load_target()
+        profile = register_profile_rules(runtime, target.mode)
+    except FileNotFoundError:
+        profile = register_profile_rules(runtime, "web")
 
     print_json({
+        "profile": profile,
         "can_advance": runtime.validate(),
         "rule_results": [
             {
@@ -191,7 +220,7 @@ def cmd_report() -> None:
 
     try:
         target = runtime.load_target()
-        target_payload = {"name": target.name, "scope": target.scope}
+        target_payload = {"name": target.name, "scope": target.scope, "mode": target.mode}
     except FileNotFoundError:
         target_payload = None
 
@@ -205,6 +234,7 @@ def cmd_report() -> None:
             "status": session.status,
         },
         "target": target_payload,
+        "profile": profile,
         "can_advance": can_advance,
         "rule_results": [
             {
@@ -514,6 +544,11 @@ def main() -> None:
     target_set = target_sub.add_parser("set")
     target_set.add_argument("--name", required=True)
     target_set.add_argument("--scope", required=True)
+    target_set.add_argument(
+        "--mode",
+        default="web",
+        choices=["web", "api", "code", "blockchain", "mobile"],
+    )
     target_sub.add_parser("show")
 
     finding = sub.add_parser("finding")

@@ -5,18 +5,26 @@ from pathlib import Path
 import json
 
 
+VALID_TARGET_MODES = {"web", "api", "code", "blockchain", "mobile"}
+
+
 @dataclass(frozen=True)
 class TargetState:
     name: str
     scope: str
+    mode: str = "web"
 
 
 class TargetStore:
     def __init__(self, workspace: Path):
         self.workspace = workspace
 
-    def set(self, name: str, scope: str) -> TargetState:
-        target = TargetState(name=name, scope=scope)
+    def set(self, name: str, scope: str, mode: str = "web") -> TargetState:
+        if mode not in VALID_TARGET_MODES:
+            allowed = ", ".join(sorted(VALID_TARGET_MODES))
+            raise ValueError(f"invalid target mode: {mode}; expected one of: {allowed}")
+
+        target = TargetState(name=name, scope=scope, mode=mode)
         self._persist(target)
         return target
 
@@ -25,6 +33,9 @@ class TargetStore:
 
         with path.open("r", encoding="utf-8") as handle:
             data = json.load(handle)
+
+        if "mode" not in data:
+            data["mode"] = "web"
 
         return TargetState(**data)
 
