@@ -227,11 +227,16 @@ def cmd_report() -> None:
 
     try:
         target = runtime.load_target()
-        target_payload = {"name": target.name, "scope": target.scope, "mode": target.mode}
+        target_payload = {
+            "name": target.name,
+            "scope": target.scope,
+            "mode": getattr(target, "mode", "web"),
+        }
+        profile = register_profile_rules(runtime, target_payload["mode"])
     except FileNotFoundError:
         target_payload = None
+        profile = register_profile_rules(runtime, "web")
 
-    runtime.register_rule(successful_probe_rule(runtime.evidence))
     can_advance = runtime.validate()
 
     print_json({
@@ -256,7 +261,6 @@ def cmd_report() -> None:
         "findings": runtime.export_findings(),
         "artifact_health": artifact_health(runtime),
     })
-
 
 def cmd_finding_create(args: argparse.Namespace) -> None:
     runtime = build_runtime()
