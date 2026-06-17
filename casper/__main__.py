@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from casper.core.runtime import CasperRuntime
-from casper.rules.builtin import successful_probe_rule
+from casper.rules.builtin import code_review_rule, successful_probe_rule
 from casper.tools.executor import export_result, persist_artifacts, run_command
 from casper.tools.http_probe import probe_url
 from casper.runtime.manifest import build_manifest, write_manifest
@@ -22,6 +22,21 @@ def build_runtime() -> CasperRuntime:
 
 def print_json(payload: dict | list) -> None:
     print(json.dumps(payload, indent=2, sort_keys=True))
+
+
+def register_profile_rules(runtime: CasperRuntime, mode: str | None) -> str:
+    selected = mode or "web"
+
+    if selected in {"web", "api", "mobile"}:
+        runtime.register_rule(successful_probe_rule(runtime.evidence))
+        return "web-live-basic"
+
+    if selected in {"code", "blockchain"}:
+        runtime.register_rule(code_review_rule(runtime.evidence, runtime.findings))
+        return "code-review-basic"
+
+    runtime.register_rule(successful_probe_rule(runtime.evidence))
+    return "web-live-basic"
 
 
 def cmd_status() -> None:
@@ -81,13 +96,20 @@ def cmd_evidence_list() -> None:
 def cmd_evidence_add(args: argparse.Namespace) -> None:
     runtime = build_runtime()
     runtime.initialize()
+
+    content = {
+        "target": args.target,
+        "observation": args.observation,
+        "evidence_type": args.type,
+        "result": args.result,
+    }
+
+    if args.status is not None:
+        content["status"] = args.status
+
     evidence = runtime.record_evidence(
         source=args.source,
-        content={
-            "target": args.target,
-            "status": args.status,
-            "observation": args.observation,
-        },
+        content=content,
     )
     print_json({
         "evidence_id": evidence.evidence_id,
@@ -99,15 +121,19 @@ def cmd_evidence_add(args: argparse.Namespace) -> None:
 def cmd_target_set(args: argparse.Namespace) -> None:
     runtime = build_runtime()
     runtime.initialize()
-    target = runtime.set_target(args.name, args.scope)
-    print_json({"name": target.name, "scope": target.scope})
+    try:
+        target = runtime.set_target(args.name, args.scope, args.mode)
+    except ValueError as exc:
+        raise SystemExit(f"error: {exc}") from None
+
+    print_json({"name": target.name, "scope": target.scope, "mode": target.mode})
 
 
 def cmd_target_show() -> None:
     runtime = build_runtime()
     runtime.initialize()
     target = runtime.load_target()
-    print_json({"name": target.name, "scope": target.scope})
+    print_json({"name": target.name, "scope": target.scope, "mode": target.mode})
 
 
 def cmd_run_probe(args: argparse.Namespace) -> None:
@@ -134,23 +160,33 @@ def cmd_run_target() -> None:
     result = probe_url(url)
     evidence = runtime.record_evidence("http-probe", result)
 
-    runtime.register_rule(successful_probe_rule(runtime.evidence))
+    profile = register_profile_rules(runtime, getattr(target, "mode", "web"))
     can_advance = runtime.validate()
 
     print_json({
-        "target": {"name": target.name, "scope": target.scope},
+        "target": {
+            "name": target.name,
+            "scope": target.scope,
+            "mode": getattr(target, "mode", "web"),
+        },
+        "profile": profile,
         "probe": result,
         "evidence_id": evidence.evidence_id,
         "can_advance": can_advance,
     })
 
-
 def cmd_validate() -> None:
     runtime = build_runtime()
     runtime.initialize()
-    runtime.register_rule(successful_probe_rule(runtime.evidence))
+
+    try:
+        target = runtime.load_target()
+        profile = register_profile_rules(runtime, target.mode)
+    except FileNotFoundError:
+        profile = register_profile_rules(runtime, "web")
 
     print_json({
+        "profile": profile,
         "can_advance": runtime.validate(),
         "rule_results": [
             {
@@ -191,11 +227,16 @@ def cmd_report() -> None:
 
     try:
         target = runtime.load_target()
-        target_payload = {"name": target.name, "scope": target.scope}
+        target_payload = {
+            "name": target.name,
+            "scope": target.scope,
+            "mode": getattr(target, "mode", "web"),
+        }
+        profile = register_profile_rules(runtime, target_payload["mode"])
     except FileNotFoundError:
         target_payload = None
+        profile = register_profile_rules(runtime, "web")
 
-    runtime.register_rule(successful_probe_rule(runtime.evidence))
     can_advance = runtime.validate()
 
     print_json({
@@ -205,6 +246,7 @@ def cmd_report() -> None:
             "status": session.status,
         },
         "target": target_payload,
+        "profile": profile,
         "can_advance": can_advance,
         "rule_results": [
             {
@@ -219,7 +261,6 @@ def cmd_report() -> None:
         "findings": runtime.export_findings(),
         "artifact_health": artifact_health(runtime),
     })
-
 
 def cmd_finding_create(args: argparse.Namespace) -> None:
     runtime = build_runtime()
@@ -314,9 +355,30 @@ def cmd_workspace_reset() -> None:
 
 
 
+def resolve_artifact_sha(args: argparse.Namespace) -> str:
+    if bool(getattr(args, "sha256", None)) == bool(getattr(args, "evidence_id", None)):
+        raise SystemExit("error: provide exactly one of --sha256 or --evidence-id")
+
+    if args.sha256:
+        return args.sha256
+
+    runtime = build_runtime()
+    runtime.initialize()
+
+    for entry in runtime.evidence.all():
+        if entry.evidence_id == args.evidence_id:
+            sha256 = entry.content.get("sha256")
+            if not sha256:
+                raise SystemExit(f"evidence has no artifact sha256: {args.evidence_id}")
+            return sha256
+
+    raise SystemExit(f"evidence not found: {args.evidence_id}")
+
+
 def cmd_artifact_cat(args: argparse.Namespace) -> None:
     workspace = Path.cwd() / ".casper"
-    path = workspace / "artifacts" / f"{args.sha256}.{args.stream}"
+    sha256 = resolve_artifact_sha(args)
+    path = workspace / "artifacts" / f"{sha256}.{args.stream}"
 
     if not path.exists():
         raise SystemExit(f"artifact not found: {path}")
@@ -326,12 +388,13 @@ def cmd_artifact_cat(args: argparse.Namespace) -> None:
 
 def cmd_artifact_verify(args: argparse.Namespace) -> None:
     workspace = Path.cwd() / ".casper"
+    sha256 = resolve_artifact_sha(args)
 
-    stdout_path = workspace / "artifacts" / f"{args.sha256}.stdout"
-    stderr_path = workspace / "artifacts" / f"{args.sha256}.stderr"
+    stdout_path = workspace / "artifacts" / f"{sha256}.stdout"
+    stderr_path = workspace / "artifacts" / f"{sha256}.stderr"
 
     payload = {
-        "sha256": args.sha256,
+        "sha256": sha256,
         "stdout_exists": stdout_path.exists(),
         "stderr_exists": stderr_path.exists(),
     }
@@ -390,6 +453,89 @@ def cmd_tool_httpx(args: argparse.Namespace) -> None:
     if result.exit_code != 0:
         raise SystemExit(result.exit_code)
 
+
+
+
+def record_tool_command(source: str, command: list[str], run_id: str = "unknown", lane: str = "tool-git") -> dict:
+    runtime = build_runtime()
+    runtime.initialize()
+
+    result = run_command(command)
+    exported = export_result(result)
+    artifacts = persist_artifacts(result, runtime.workspace)
+
+    evidence_payload = {
+        "tool": source,
+        "command": exported["command"],
+        "exit_code": exported["exit_code"],
+        "timestamp": exported["timestamp"],
+        "sha256": exported["sha256"],
+        "stdout_path": artifacts["stdout_path"],
+        "stderr_path": artifacts["stderr_path"],
+        "stdout_bytes": len(result.stdout.encode()),
+        "stderr_bytes": len(result.stderr.encode()),
+        "run_id": run_id,
+        "lane": lane,
+    }
+
+    evidence = runtime.record_evidence(
+        source=source,
+        content=evidence_payload,
+    )
+
+    evidence_payload["evidence_id"] = evidence.evidence_id
+
+    if result.exit_code != 0:
+        print_json(evidence_payload)
+        raise SystemExit(result.exit_code)
+
+    return evidence_payload
+
+
+def cmd_tool_git_head(args: argparse.Namespace) -> None:
+    payload = record_tool_command(
+        source="tool-git-head",
+        command=["git", "-C", args.repo, "log", "-1", "--pretty=repo_head=%H subject=%s date=%cI"],
+        run_id=args.run_id,
+        lane="tool-git",
+    )
+    print_json(payload)
+
+
+def cmd_tool_git_grep(args: argparse.Namespace) -> None:
+    payload = record_tool_command(
+        source="tool-git-grep",
+        command=["grep", "-RIn", args.pattern, args.path],
+        run_id=args.run_id,
+        lane="tool-git",
+    )
+    print_json(payload)
+
+
+def cmd_tool_git_merge_diff(args: argparse.Namespace) -> None:
+    parent = f"{args.merge}^1"
+    command = ["git", "-C", args.repo, "diff", parent, args.merge]
+    if args.path:
+        command.extend(["--", args.path])
+
+    payload = record_tool_command(
+        source="tool-git-merge-diff",
+        command=command,
+        run_id=args.run_id,
+        lane="tool-git",
+    )
+    print_json(payload)
+
+
+def cmd_tool_git_changed_files(args: argparse.Namespace) -> None:
+    parent = f"{args.merge}^1"
+    payload = record_tool_command(
+        source="tool-git-changed-files",
+        command=["git", "-C", args.repo, "diff", "--name-only", parent, args.merge],
+        run_id=args.run_id,
+        lane="tool-git",
+    )
+    print_json(payload)
 
 
 def cmd_replay_digest() -> None:
@@ -488,12 +634,30 @@ def main() -> None:
     tool_httpx = tool_sub.add_parser("httpx")
     tool_httpx.add_argument("argv", nargs=argparse.REMAINDER)
 
+    tool_git_head = tool_sub.add_parser("git-head")
+    tool_git_head.add_argument("--repo", required=True)
+
+    tool_git_grep = tool_sub.add_parser("git-grep")
+    tool_git_grep.add_argument("--pattern", required=True)
+    tool_git_grep.add_argument("--path", required=True)
+
+    tool_git_merge_diff = tool_sub.add_parser("git-merge-diff")
+    tool_git_merge_diff.add_argument("--repo", required=True)
+    tool_git_merge_diff.add_argument("--merge", required=True)
+    tool_git_merge_diff.add_argument("--path")
+
+    tool_git_changed_files = tool_sub.add_parser("git-changed-files")
+    tool_git_changed_files.add_argument("--repo", required=True)
+    tool_git_changed_files.add_argument("--merge", required=True)
+
     artifact = sub.add_parser("artifact")
     artifact_sub = artifact.add_subparsers(dest="artifact_command")
     artifact_cat = artifact_sub.add_parser("cat")
     artifact_verify = artifact_sub.add_parser("verify")
-    artifact_verify.add_argument("--sha256", required=True)
-    artifact_cat.add_argument("--sha256", required=True)
+    artifact_verify.add_argument("--sha256")
+    artifact_verify.add_argument("--evidence-id")
+    artifact_cat.add_argument("--sha256")
+    artifact_cat.add_argument("--evidence-id")
     artifact_cat.add_argument("--stream", choices=["stdout", "stderr"], required=True)
 
     cmd_parser = sub.add_parser("cmd")
@@ -514,6 +678,11 @@ def main() -> None:
     target_set = target_sub.add_parser("set")
     target_set.add_argument("--name", required=True)
     target_set.add_argument("--scope", required=True)
+    target_set.add_argument(
+        "--mode",
+        default="web",
+        choices=["web", "api", "code", "blockchain", "mobile"],
+    )
     target_sub.add_parser("show")
 
     finding = sub.add_parser("finding")
@@ -540,7 +709,17 @@ def main() -> None:
     evidence_add = evidence_sub.add_parser("add")
     evidence_add.add_argument("--source", required=True)
     evidence_add.add_argument("--target", required=True)
-    evidence_add.add_argument("--status", type=int, required=True)
+    evidence_add.add_argument("--status", type=int)
+    evidence_add.add_argument(
+        "--type",
+        default="manual",
+        choices=["manual", "http", "command", "code", "patch", "metadata"],
+    )
+    evidence_add.add_argument(
+        "--result",
+        default="observed",
+        choices=["observed", "blocked", "confirmed", "failed"],
+    )
     evidence_add.add_argument("--observation", required=True)
     evidence_sub.add_parser("list")
 
@@ -566,6 +745,14 @@ def main() -> None:
         cmd_worker_start(args)
     elif args.command == "tool" and args.tool_command == "httpx":
         cmd_tool_httpx(args)
+    elif args.command == "tool" and args.tool_command == "git-head":
+        cmd_tool_git_head(args)
+    elif args.command == "tool" and args.tool_command == "git-grep":
+        cmd_tool_git_grep(args)
+    elif args.command == "tool" and args.tool_command == "git-merge-diff":
+        cmd_tool_git_merge_diff(args)
+    elif args.command == "tool" and args.tool_command == "git-changed-files":
+        cmd_tool_git_changed_files(args)
     elif args.command == "artifact" and args.artifact_command == "cat":
         cmd_artifact_cat(args)
     elif args.command == "artifact" and args.artifact_command == "verify":
