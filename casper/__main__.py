@@ -160,20 +160,20 @@ def cmd_run_target() -> None:
     result = probe_url(url)
     evidence = runtime.record_evidence("http-probe", result)
 
-    if target_payload is None:
-        profile = register_profile_rules(runtime, "web")
-    else:
-        profile = register_profile_rules(runtime, target.mode)
-
+    profile = register_profile_rules(runtime, getattr(target, "mode", "web"))
     can_advance = runtime.validate()
 
     print_json({
-        "target": {"name": target.name, "scope": target.scope},
+        "target": {
+            "name": target.name,
+            "scope": target.scope,
+            "mode": getattr(target, "mode", "web"),
+        },
+        "profile": profile,
         "probe": result,
         "evidence_id": evidence.evidence_id,
         "can_advance": can_advance,
     })
-
 
 def cmd_validate() -> None:
     runtime = build_runtime()
