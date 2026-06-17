@@ -387,6 +387,8 @@ def cmd_tool_httpx(args: argparse.Namespace) -> None:
     evidence_payload["evidence_id"] = evidence.evidence_id
 
     print_json(evidence_payload)
+    if result.exit_code != 0:
+        raise SystemExit(result.exit_code)
 
 
 
