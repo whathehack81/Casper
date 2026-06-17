@@ -14,3 +14,11 @@ scratch_run.py
 !casper/runtime/*.py
 !casper/runtime/
 !casper/runtime/*.py
+
+targets/
+.casper/
+.pytest_cache/
+__pycache__/
+*.pyc
+.venv/
+casper.egg-info/

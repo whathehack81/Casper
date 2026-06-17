@@ -94,25 +94,36 @@ class CasperRuntime:
 
     def link_finding_evidence(
         self,
-        title: str,
         evidence_id: str,
+        title: str | None = None,
+        finding_id: str | None = None,
     ) -> Finding:
         if not self.evidence.exists(evidence_id):
             raise ValueError(f"evidence not found: {evidence_id}")
 
         return self.findings.link_evidence(
             title=title,
+            finding_id=finding_id,
             evidence_id=evidence_id,
         )
 
-    def set_finding_status(self, title: str, status: str) -> Finding:
+    def set_finding_status(
+        self,
+        status: str,
+        title: str | None = None,
+        finding_id: str | None = None,
+    ) -> Finding:
         allowed_statuses = {"new", "blocked", "ready", "submitted"}
 
         if status not in allowed_statuses:
             allowed = ", ".join(sorted(allowed_statuses))
             raise ValueError(f"invalid status: {status}; expected one of: {allowed}")
 
-        return self.findings.set_status(title=title, status=status)
+        return self.findings.set_status(
+            title=title,
+            finding_id=finding_id,
+            status=status,
+        )
 
     def export_findings(self) -> list[dict]:
         evidence_by_id = {
