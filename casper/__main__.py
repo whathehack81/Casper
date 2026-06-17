@@ -451,6 +451,89 @@ def cmd_tool_httpx(args: argparse.Namespace) -> None:
 
 
 
+
+def record_tool_command(source: str, command: list[str], run_id: str = "unknown", lane: str = "tool-git") -> dict:
+    runtime = build_runtime()
+    runtime.initialize()
+
+    result = run_command(command)
+    exported = export_result(result)
+    artifacts = persist_artifacts(result, runtime.workspace)
+
+    evidence_payload = {
+        "tool": source,
+        "command": exported["command"],
+        "exit_code": exported["exit_code"],
+        "timestamp": exported["timestamp"],
+        "sha256": exported["sha256"],
+        "stdout_path": artifacts["stdout_path"],
+        "stderr_path": artifacts["stderr_path"],
+        "stdout_bytes": len(result.stdout.encode()),
+        "stderr_bytes": len(result.stderr.encode()),
+        "run_id": run_id,
+        "lane": lane,
+    }
+
+    evidence = runtime.record_evidence(
+        source=source,
+        content=evidence_payload,
+    )
+
+    evidence_payload["evidence_id"] = evidence.evidence_id
+
+    if result.exit_code != 0:
+        print_json(evidence_payload)
+        raise SystemExit(result.exit_code)
+
+    return evidence_payload
+
+
+def cmd_tool_git_head(args: argparse.Namespace) -> None:
+    payload = record_tool_command(
+        source="tool-git-head",
+        command=["git", "-C", args.repo, "log", "-1", "--pretty=repo_head=%H subject=%s date=%cI"],
+        run_id=args.run_id,
+        lane="tool-git",
+    )
+    print_json(payload)
+
+
+def cmd_tool_git_grep(args: argparse.Namespace) -> None:
+    payload = record_tool_command(
+        source="tool-git-grep",
+        command=["grep", "-RIn", args.pattern, args.path],
+        run_id=args.run_id,
+        lane="tool-git",
+    )
+    print_json(payload)
+
+
+def cmd_tool_git_merge_diff(args: argparse.Namespace) -> None:
+    parent = f"{args.merge}^1"
+    command = ["git", "-C", args.repo, "diff", parent, args.merge]
+    if args.path:
+        command.extend(["--", args.path])
+
+    payload = record_tool_command(
+        source="tool-git-merge-diff",
+        command=command,
+        run_id=args.run_id,
+        lane="tool-git",
+    )
+    print_json(payload)
+
+
+def cmd_tool_git_changed_files(args: argparse.Namespace) -> None:
+    parent = f"{args.merge}^1"
+    payload = record_tool_command(
+        source="tool-git-changed-files",
+        command=["git", "-C", args.repo, "diff", "--name-only", parent, args.merge],
+        run_id=args.run_id,
+        lane="tool-git",
+    )
+    print_json(payload)
+
+
 def cmd_replay_digest() -> None:
     store = EventStore(Path(".casper"))
     digest = replay_digest(store.all())
@@ -547,6 +630,22 @@ def main() -> None:
     tool_httpx = tool_sub.add_parser("httpx")
     tool_httpx.add_argument("argv", nargs=argparse.REMAINDER)
 
+    tool_git_head = tool_sub.add_parser("git-head")
+    tool_git_head.add_argument("--repo", required=True)
+
+    tool_git_grep = tool_sub.add_parser("git-grep")
+    tool_git_grep.add_argument("--pattern", required=True)
+    tool_git_grep.add_argument("--path", required=True)
+
+    tool_git_merge_diff = tool_sub.add_parser("git-merge-diff")
+    tool_git_merge_diff.add_argument("--repo", required=True)
+    tool_git_merge_diff.add_argument("--merge", required=True)
+    tool_git_merge_diff.add_argument("--path")
+
+    tool_git_changed_files = tool_sub.add_parser("git-changed-files")
+    tool_git_changed_files.add_argument("--repo", required=True)
+    tool_git_changed_files.add_argument("--merge", required=True)
+
     artifact = sub.add_parser("artifact")
     artifact_sub = artifact.add_subparsers(dest="artifact_command")
     artifact_cat = artifact_sub.add_parser("cat")
@@ -642,6 +741,14 @@ def main() -> None:
         cmd_worker_start(args)
     elif args.command == "tool" and args.tool_command == "httpx":
         cmd_tool_httpx(args)
+    elif args.command == "tool" and args.tool_command == "git-head":
+        cmd_tool_git_head(args)
+    elif args.command == "tool" and args.tool_command == "git-grep":
+        cmd_tool_git_grep(args)
+    elif args.command == "tool" and args.tool_command == "git-merge-diff":
+        cmd_tool_git_merge_diff(args)
+    elif args.command == "tool" and args.tool_command == "git-changed-files":
+        cmd_tool_git_changed_files(args)
     elif args.command == "artifact" and args.artifact_command == "cat":
         cmd_artifact_cat(args)
     elif args.command == "artifact" and args.artifact_command == "verify":
