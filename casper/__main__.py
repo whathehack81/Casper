@@ -283,7 +283,7 @@ def cmd_report() -> None:
         ],
         "evidence_count": len(runtime.evidence.all()),
         "findings_count": len(runtime.findings.all()),
-        "finding_records": runtime.export_findings(),
+        "raw_findings": runtime.export_findings(),
         "artifact_health": artifact_health(runtime),
     })
 
