@@ -6,7 +6,8 @@ import json
 from pathlib import Path
 
 from casper.core.runtime import CasperRuntime
-from casper.rules.builtin import code_review_rule, successful_probe_rule
+from casper.reasoning.engine import get_profile
+from casper.rules.builtin import proof_complete_rule, validation_findings_rule
 from casper.tools.executor import export_result, persist_artifacts, run_command
 from casper.tools.http_probe import probe_url
 from casper.runtime.manifest import build_manifest, write_manifest
@@ -25,18 +26,11 @@ def print_json(payload: dict | list) -> None:
 
 
 def register_profile_rules(runtime: CasperRuntime, mode: str | None) -> str:
-    selected = mode or "web"
-
-    if selected in {"web", "api", "mobile"}:
-        runtime.register_rule(successful_probe_rule(runtime.evidence))
-        return "web-live-basic"
-
-    if selected in {"code", "blockchain"}:
-        runtime.register_rule(code_review_rule(runtime.evidence, runtime.findings))
-        return "code-review-basic"
-
-    runtime.register_rule(successful_probe_rule(runtime.evidence))
-    return "web-live-basic"
+    profile = get_profile(mode)
+    runtime.configure_validation(profile.mode)
+    runtime.register_rule(validation_findings_rule(runtime, profile.mode))
+    runtime.register_rule(proof_complete_rule(runtime, profile.mode))
+    return profile.name
 
 
 def cmd_status() -> None:
@@ -102,6 +96,7 @@ def cmd_evidence_add(args: argparse.Namespace) -> None:
         "observation": args.observation,
         "evidence_type": args.type,
         "result": args.result,
+        "proof": list(args.proof or []),
     }
 
     if args.status is not None:
@@ -188,6 +183,21 @@ def cmd_validate() -> None:
     print_json({
         "profile": profile,
         "can_advance": runtime.validate(),
+        "findings": [
+            {
+                "finding_id": decision.finding_id,
+                "title": decision.title,
+                "validation_state": decision.validation_state,
+                "confirmation_status": decision.confirmation_status,
+                "confidence": decision.confidence,
+                "missing_evidence": decision.missing_evidence,
+                "proof_requirements": decision.proof_requirements,
+                "reasons": decision.reasons,
+                "false_positive_reason": decision.false_positive_reason,
+                "can_advance": decision.can_advance,
+            }
+            for decision in runtime.last_assessments
+        ],
         "rule_results": [
             {
                 "name": result.name,
@@ -248,6 +258,21 @@ def cmd_report() -> None:
         "target": target_payload,
         "profile": profile,
         "can_advance": can_advance,
+        "findings": [
+            {
+                "finding_id": decision.finding_id,
+                "title": decision.title,
+                "validation_state": decision.validation_state,
+                "confirmation_status": decision.confirmation_status,
+                "confidence": decision.confidence,
+                "missing_evidence": decision.missing_evidence,
+                "proof_requirements": decision.proof_requirements,
+                "reasons": decision.reasons,
+                "false_positive_reason": decision.false_positive_reason,
+                "can_advance": decision.can_advance,
+            }
+            for decision in runtime.last_assessments
+        ],
         "rule_results": [
             {
                 "name": result.name,
@@ -258,7 +283,7 @@ def cmd_report() -> None:
         ],
         "evidence_count": len(runtime.evidence.all()),
         "findings_count": len(runtime.findings.all()),
-        "findings": runtime.export_findings(),
+        "raw_findings": runtime.export_findings(),
         "artifact_health": artifact_health(runtime),
     })
 
@@ -275,6 +300,9 @@ def cmd_finding_create(args: argparse.Namespace) -> None:
         "finding_id": finding.finding_id,
         "severity": finding.severity,
         "status": finding.status,
+        "validation_state": finding.validation_state,
+        "confirmation_status": finding.confirmation_status,
+        "confidence": finding.confidence,
         "target": finding.target,
         "evidence_ids": finding.evidence_ids,
     })
@@ -311,7 +339,37 @@ def cmd_finding_status(args: argparse.Namespace) -> None:
         "severity": finding.severity,
         "target": finding.target,
         "status": finding.status,
+        "validation_state": finding.validation_state,
+        "confirmation_status": finding.confirmation_status,
+        "confidence": finding.confidence,
         "evidence_ids": finding.evidence_ids,
+    })
+
+
+def cmd_finding_review(args: argparse.Namespace) -> None:
+    require_finding_selector(args)
+    runtime = build_runtime()
+    runtime.initialize()
+
+    try:
+        finding = runtime.review_finding(
+            title=args.title,
+            finding_id=args.finding_id,
+            validation_state=args.validation_state,
+            confirmation_status=args.confirmation_status,
+            confidence=args.confidence,
+            false_positive_reason=args.false_positive_reason,
+        )
+    except ValueError as exc:
+        raise SystemExit(f"error: {exc}") from None
+
+    print_json({
+        "title": finding.title,
+        "finding_id": finding.finding_id,
+        "validation_state": finding.validation_state,
+        "confirmation_status": finding.confirmation_status,
+        "confidence": finding.confidence,
+        "false_positive_reason": finding.false_positive_reason,
     })
 
 
@@ -558,6 +616,9 @@ def cmd_replay_project() -> None:
         "event_count": projection.event_count,
         "run_ids": projection.run_ids,
         "evidence_ids": projection.evidence_ids,
+        "validation_modes": projection.validation_modes,
+        "advanceable_findings": projection.advanceable_findings,
+        "can_advance": projection.can_advance,
     })
 
 
@@ -704,6 +765,19 @@ def main() -> None:
         required=True,
         choices=["new", "blocked", "ready", "submitted"],
     )
+    finding_review = finding_sub.add_parser("review")
+    finding_review.add_argument("--title")
+    finding_review.add_argument("--finding-id")
+    finding_review.add_argument(
+        "--validation-state",
+        choices=["candidate", "incomplete", "supported", "confirmed", "false_positive"],
+    )
+    finding_review.add_argument(
+        "--confirmation-status",
+        choices=["unconfirmed", "needs-proof", "confirmed", "rejected"],
+    )
+    finding_review.add_argument("--confidence", type=float)
+    finding_review.add_argument("--false-positive-reason")
     evidence = sub.add_parser("evidence")
     evidence_sub = evidence.add_subparsers(dest="evidence_command")
     evidence_add = evidence_sub.add_parser("add")
@@ -720,6 +794,7 @@ def main() -> None:
         default="observed",
         choices=["observed", "blocked", "confirmed", "failed"],
     )
+    evidence_add.add_argument("--proof", action="append")
     evidence_add.add_argument("--observation", required=True)
     evidence_sub.add_parser("list")
 
@@ -775,6 +850,8 @@ def main() -> None:
         cmd_finding_link_evidence(args)
     elif args.command == "finding" and args.finding_command == "status":
         cmd_finding_status(args)
+    elif args.command == "finding" and args.finding_command == "review":
+        cmd_finding_review(args)
     elif args.command == "evidence" and args.evidence_command == "add":
         cmd_evidence_add(args)
     elif args.command == "evidence" and args.evidence_command == "list":

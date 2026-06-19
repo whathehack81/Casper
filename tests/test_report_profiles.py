@@ -46,5 +46,7 @@ def test_report_uses_code_profile_without_name_error(tmp_path, monkeypatch, caps
     payload = json.loads(capsys.readouterr().out)
 
     assert payload["target"]["mode"] == "code"
-    assert payload["profile"] == "code-review-basic"
+    assert payload["profile"] == "code-review-strict"
     assert payload["can_advance"] is True
+    assert payload["findings"][0]["validation_state"] == "confirmed"
+    assert payload["findings"][0]["can_advance"] is True
