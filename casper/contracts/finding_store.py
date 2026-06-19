@@ -151,3 +151,30 @@ class FindingStore:
         finding.link_evidence(evidence_id)
         self._persist()
         return finding
+
+    def update_validation(
+        self,
+        *,
+        title: str | None = None,
+        finding_id: str | None = None,
+        validation_state: str | None = None,
+        confirmation_status: str | None = None,
+        confidence: float | None = None,
+        false_positive_reason: str | None = None,
+    ) -> Finding:
+        finding = self._find(title=title, finding_id=finding_id)
+
+        if finding is None:
+            raise ValueError("finding not found")
+
+        if validation_state is not None:
+            finding.validation_state = validation_state
+        if confirmation_status is not None:
+            finding.confirmation_status = confirmation_status
+        if confidence is not None:
+            finding.confidence = confidence
+        if false_positive_reason is not None:
+            finding.false_positive_reason = false_positive_reason
+
+        self._persist()
+        return finding

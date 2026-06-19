@@ -6,6 +6,8 @@ from hashlib import sha256
 from pathlib import Path
 import json
 
+from casper.contracts.evidence import normalize_evidence_content
+
 
 @dataclass(frozen=True)
 class Evidence:
@@ -22,18 +24,19 @@ class EvidenceRegistry:
 
     def add(self, source: str, content: dict) -> Evidence:
         timestamp = datetime.now(UTC).isoformat()
+        normalized_content = normalize_evidence_content(source, content)
 
         payload = {
             "timestamp": timestamp,
             "source": source,
-            "content": content,
+            "content": normalized_content,
         }
 
         digest = sha256(
             json.dumps(payload, sort_keys=True).encode()
         ).hexdigest()
 
-        content = dict(content)
+        content = dict(normalized_content)
         content["evidence_id"] = digest
 
         evidence = Evidence(

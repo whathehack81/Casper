@@ -9,6 +9,13 @@ class Finding:
     severity: str = "informational"
     target: Optional[str] = None
     status: str = "new"
+    confidence: float = 0.0
+    validation_state: str = "candidate"
+    confirmation_status: str = "unconfirmed"
+    false_positive_reason: str | None = None
+    proof_requirements: List[str] = field(default_factory=list)
+    missing_evidence: List[str] = field(default_factory=list)
+    reasoning: List[str] = field(default_factory=list)
     notes: List[str] = field(default_factory=list)
     evidence: List[Dict[str, Any]] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -23,3 +30,7 @@ class Finding:
     def link_evidence(self, evidence_id: str) -> None:
         if evidence_id not in self.evidence_ids:
             self.evidence_ids.append(evidence_id)
+
+    def add_reasoning(self, reason: str) -> None:
+        if reason and reason not in self.reasoning:
+            self.reasoning.append(reason)

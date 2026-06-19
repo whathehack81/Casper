@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from casper.evidence.registry import EvidenceRegistry
+from casper.reasoning.engine import get_profile
 from casper.rules.engine import Rule
 
 
@@ -106,4 +107,37 @@ def code_review_rule(registry: EvidenceRegistry, findings: Any) -> Rule:
         check=check,
         pass_reason="ready finding has linked code-review evidence",
         fail_reason="missing ready finding with linked code-review evidence",
+    )
+
+
+def validation_findings_rule(runtime: Any, mode: str) -> Rule:
+    profile = get_profile(mode)
+
+    def check() -> bool:
+        assessments = runtime.assess_findings(profile.mode)
+        return any(
+            decision.validation_state in {"supported", "confirmed"}
+            for decision in assessments
+        )
+
+    return Rule(
+        name=f"{profile.mode} findings validated",
+        check=check,
+        pass_reason=f"{profile.mode} finding has supporting evidence",
+        fail_reason=f"no {profile.mode} finding has sufficient supporting evidence",
+    )
+
+
+def proof_complete_rule(runtime: Any, mode: str) -> Rule:
+    profile = get_profile(mode)
+
+    def check() -> bool:
+        assessments = runtime.assess_findings(profile.mode)
+        return any(decision.can_advance for decision in assessments)
+
+    return Rule(
+        name=f"{profile.mode} proof complete",
+        check=check,
+        pass_reason=f"{profile.mode} finding satisfies proof requirements",
+        fail_reason=f"no {profile.mode} finding satisfies proof requirements",
     )
