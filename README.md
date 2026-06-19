@@ -2,37 +2,62 @@
 
 Deterministic security-analysis runtime for session state, evidence persistence, findings, rules, and reproducible workflow advancement.
 
-Casper now validates findings through mode-specific profiles, structured evidence contracts, Gatekeeper advancement rules, and replayable reasoning decisions.
+Casper validates findings through mode-specific profiles, structured evidence contracts, Gatekeeper advancement rules, and replayable reasoning decisions.
 
-## Run
+## Prerequisites
+
+- Python 3.11 or later
+- No external runtime dependencies — Casper uses only the Python standard library
+
+## Installation
+
+Clone the repository and install the package in editable mode:
 
 ```bash
-PYTHONPATH="$PWD" python -m casper status
+git clone https://github.com/whathehack81/Casper.git
+cd Casper
+python -m venv .venv
+source .venv/bin/activate   # On Windows: .venv\Scripts\activate
+pip install -e .
 ```
 
-## Reset workspace
+After installation the `casper` command is available on your `PATH`:
 
 ```bash
-PYTHONPATH="$PWD" python -m casper workspace reset
+casper status
 ```
 
-## Set target
+## Quickstart
+
+### 1 — Check workspace status
 
 ```bash
-PYTHONPATH="$PWD" python -m casper target set --name example.com --scope web
-PYTHONPATH="$PWD" python -m casper target show
+casper status
 ```
 
-## Run target probe
+### 2 — Reset workspace
 
 ```bash
-PYTHONPATH="$PWD" python -m casper run target
+casper workspace reset
 ```
 
-## Add evidence manually
+### 3 — Set a target
 
 ```bash
-PYTHONPATH="$PWD" python -m casper evidence add \
+casper target set --name example.com --scope web
+casper target show
+```
+
+### 4 — Run a target probe
+
+```bash
+casper run target
+```
+
+### 5 — Add evidence manually
+
+```bash
+casper evidence add \
   --source manual-check \
   --target example.com \
   --status 200 \
@@ -41,40 +66,47 @@ PYTHONPATH="$PWD" python -m casper evidence add \
   --observation "homepage reachable"
 ```
 
-## Findings
+### 6 — Create and review a finding
 
 ```bash
-PYTHONPATH="$PWD" python -m casper finding create \
+casper finding create \
   --title "Admin Exposure" \
   --severity medium
 
-PYTHONPATH="$PWD" python -m casper finding list
-```
+casper finding list
 
-## Review a finding
-
-```bash
-PYTHONPATH="$PWD" python -m casper finding review \
+casper finding review \
   --finding-id <finding-id> \
   --validation-state false_positive \
   --confirmation-status rejected \
   --false-positive-reason "expected behavior"
 ```
 
-## Report
+### 7 — Validate and report
 
 ```bash
-PYTHONPATH="$PWD" python -m casper report
+casper validate
+casper report
 ```
 
-## Validate
+## Running tests
 
 ```bash
-PYTHONPATH="$PWD" python -m casper validate
+pip install pytest
+pytest -q
 ```
 
-## Test
+## Troubleshooting
 
-```bash
-PYTHONPATH="$PWD" pytest -q
-```
+**`casper: command not found`**
+Ensure your virtual environment is activated (`source .venv/bin/activate`) and that you installed the project with `pip install -e .`.
+
+**`ModuleNotFoundError: No module named 'casper'`**
+Run `pip install -e .` from the repository root so the package is installed in your active environment.
+
+**Tests fail with import errors**
+Make sure you have installed the project (`pip install -e .`) before running `pytest`.
+
+**Python version mismatch**
+Casper requires Python 3.11 or later. Check your version with `python --version` and switch to a supported release if needed.
+
