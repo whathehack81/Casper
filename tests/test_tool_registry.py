@@ -6,8 +6,18 @@ from casper.tools.registry import get_tool, list_tools, run_registered_tool
 
 def test_registered_tools_include_core_recon_tools() -> None:
     names = {item["name"] for item in list_tools()}
-    assert {"httpx", "subfinder", "nuclei", "curl", "git", "python"}.issubset(names)
+    assert {
+        "httpx",
+        "subfinder",
+        "nuclei",
+        "curl",
+        "git",
+        "python",
+        "gitleaks",
+        "trufflehog",
+    }.issubset(names)
     assert get_tool("httpx").lane == "recon-http"
+    assert get_tool("trufflehog").lane == "code-secret"
 
 
 def test_registered_tool_records_evidence(tmp_path) -> None:
