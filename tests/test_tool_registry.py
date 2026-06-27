@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import sys
-
 from casper.core.runtime import CasperRuntime
 from casper.tools.registry import get_tool, list_tools, run_registered_tool
 
@@ -36,5 +34,5 @@ def test_registered_tool_records_evidence(tmp_path) -> None:
     assert evidence.content["target"] == "local"
     assert evidence.content["result"] == "confirmed"
 
-    stdout = (tmp_path / ".casper" / "artifacts" / f"{result.sha256}.stdout").read_text(encoding="utf-8")
-    assert "CASPER_TOOL_OK" in stdout
+    artifact = tmp_path / ".casper" / "artifacts" / f"{result.sha256}.stdout"
+    assert "CASPER_TOOL_OK" in artifact.read_text(encoding="utf-8")
