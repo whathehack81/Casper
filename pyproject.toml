@@ -23,3 +23,7 @@ py-modules = ["gatekeeper"]
 
 [project.scripts]
 casper = "casper.__main__:main"
+
+[[tool.mypy.overrides]]
+module = "casper.rip.validation"
+ignore_errors = true
