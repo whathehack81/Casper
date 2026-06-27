@@ -23,6 +23,7 @@ py-modules = ["gatekeeper"]
 
 [project.scripts]
 casper = "casper.cli:main"
+casper-rip = "casper.rip_cli:main"
 casper-tools = "casper.tools_cli:main"
 
 [[tool.mypy.overrides]]
