@@ -29,3 +29,20 @@ casper-tools = "casper.tools_cli:main"
 [[tool.mypy.overrides]]
 module = "casper.rip.validation"
 ignore_errors = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+norecursedirs = [
+  ".git",
+  ".venv",
+  "venv",
+  "env",
+  "build",
+  "dist",
+  "intel",
+  "diagnostics",
+  "toolchains",
+  "__pycache__",
+  "*.egg-info"
+]
