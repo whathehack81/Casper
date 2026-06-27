@@ -98,6 +98,13 @@ TOOL_REGISTRY: dict[str, ToolSpec] = {
         "Secret scanning",
         300,
     ),
+    "trufflehog": ToolSpec(
+        "trufflehog",
+        "trufflehog",
+        "code-secret",
+        "Verified secret scanning",
+        300,
+    ),
     "semgrep": ToolSpec("semgrep", "semgrep", "code-sast", "Static analysis", 300),
     "pytest": ToolSpec("pytest", "pytest", "code-test", "Python test execution", 300),
     "go": ToolSpec("go", "go", "code-test", "Go build/test tooling", 300),
