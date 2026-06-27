@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from pathlib import Path
+import shutil
 from typing import Any
 
 from casper.core.runtime import CasperRuntime
@@ -15,6 +16,16 @@ class ToolSpec:
     lane: str
     description: str
     default_timeout: int = 120
+
+
+@dataclass(frozen=True)
+class ToolHealth:
+    name: str
+    binary: str
+    lane: str
+    installed: bool
+    path: str | None
+    description: str
 
 
 @dataclass(frozen=True)
@@ -126,12 +137,80 @@ TOOL_REGISTRY: dict[str, ToolSpec] = {
     ),
 }
 
+TOOL_PROFILES: dict[str, list[str]] = {
+    "recon": [
+        "subfinder",
+        "assetfinder",
+        "dnsx",
+        "httpx",
+        "naabu",
+        "katana",
+        "gau",
+        "waybackurls",
+        "ffuf",
+        "nuclei",
+    ],
+    "secrets": ["gitleaks", "trufflehog"],
+    "code": ["git", "rg", "grep", "semgrep", "trivy", "gitleaks", "trufflehog"],
+    "validation": ["curl", "jq", "nuclei", "pytest", "go", "mvn", "gradle"],
+    "transform": ["jq", "rg", "grep"],
+}
+
 
 def list_tools() -> list[dict[str, Any]]:
     return [
         asdict(spec)
         for spec in sorted(TOOL_REGISTRY.values(), key=lambda item: item.name)
     ]
+
+
+def list_profiles() -> dict[str, list[str]]:
+    return {name: list(tools) for name, tools in sorted(TOOL_PROFILES.items())}
+
+
+def get_profile(name: str) -> list[dict[str, Any]]:
+    try:
+        tool_names = TOOL_PROFILES[name]
+    except KeyError as exc:
+        known = ", ".join(sorted(TOOL_PROFILES))
+        raise ValueError(f"unknown profile: {name}. known profiles: {known}") from exc
+    return [asdict(get_tool(tool_name)) for tool_name in tool_names]
+
+
+def doctor_tools(profile: str | None = None) -> dict[str, Any]:
+    if profile is None:
+        tool_names = sorted(TOOL_REGISTRY)
+    else:
+        tool_names = list(TOOL_PROFILES.get(profile, []))
+        if not tool_names:
+            known = ", ".join(sorted(TOOL_PROFILES))
+            raise ValueError(f"unknown profile: {profile}. known profiles: {known}")
+
+    checks: list[ToolHealth] = []
+    for tool_name in tool_names:
+        spec = get_tool(tool_name)
+        path = shutil.which(spec.binary)
+        checks.append(
+            ToolHealth(
+                name=spec.name,
+                binary=spec.binary,
+                lane=spec.lane,
+                installed=path is not None,
+                path=path,
+                description=spec.description,
+            )
+        )
+
+    installed = [check.name for check in checks if check.installed]
+    missing = [check.name for check in checks if not check.installed]
+    return {
+        "profile": profile,
+        "installed_count": len(installed),
+        "missing_count": len(missing),
+        "installed": installed,
+        "missing": missing,
+        "tools": [asdict(check) for check in checks],
+    }
 
 
 def get_tool(name: str) -> ToolSpec:

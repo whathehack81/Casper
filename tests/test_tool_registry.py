@@ -1,7 +1,14 @@
 from __future__ import annotations
 
 from casper.core.runtime import CasperRuntime
-from casper.tools.registry import get_tool, list_tools, run_registered_tool
+from casper.tools.registry import (
+    doctor_tools,
+    get_profile,
+    get_tool,
+    list_profiles,
+    list_tools,
+    run_registered_tool,
+)
 
 
 def test_registered_tools_include_core_recon_tools() -> None:
@@ -18,6 +25,22 @@ def test_registered_tools_include_core_recon_tools() -> None:
     }.issubset(names)
     assert get_tool("httpx").lane == "recon-http"
     assert get_tool("trufflehog").lane == "code-secret"
+
+
+def test_tool_profiles_group_lanes() -> None:
+    profiles = list_profiles()
+    assert "recon" in profiles
+    assert "secrets" in profiles
+    assert "trufflehog" in profiles["secrets"]
+    assert any(item["name"] == "trufflehog" for item in get_profile("secrets"))
+
+
+def test_doctor_reports_installed_and_missing_tools() -> None:
+    result = doctor_tools(profile="secrets")
+    assert result["profile"] == "secrets"
+    assert "installed" in result
+    assert "missing" in result
+    assert {item["name"] for item in result["tools"]} == {"gitleaks", "trufflehog"}
 
 
 def test_registered_tool_records_evidence(tmp_path) -> None:
