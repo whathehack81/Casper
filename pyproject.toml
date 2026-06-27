@@ -22,7 +22,7 @@ packages = { find = { include = ["casper*"] } }
 py-modules = ["gatekeeper"]
 
 [project.scripts]
-casper = "casper.__main__:main"
+casper = "casper.cli:main"
 casper-tools = "casper.tools_cli:main"
 
 [[tool.mypy.overrides]]
