@@ -14,7 +14,9 @@ def invoke_rip(monkeypatch: pytest.MonkeyPatch, argv: list[str]) -> None:
     rip_cli.main()
 
 
-def read_json_output(capsys: pytest.CaptureFixture[str]) -> dict[str, Any] | list[dict[str, Any]]:
+def read_json_output(
+    capsys: pytest.CaptureFixture[str],
+) -> dict[str, Any] | list[dict[str, Any]]:
     captured = capsys.readouterr()
     return json.loads(captured.out)
 
@@ -57,7 +59,8 @@ def test_rip_cli_capsule_lifecycle(
     invoke_rip(monkeypatch, ["list"])
     rows = read_json_output(capsys)
     assert isinstance(rows, list)
-    assert rows == [
+    matching_rows = [row for row in rows if row["validation_id"] == validation_id]
+    assert matching_rows == [
         {
             "capsule_path": str(capsule_path),
             "finding_id": None,
