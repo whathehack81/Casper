@@ -171,7 +171,9 @@ def run_validation(
             confidence=1.0 if status == "VERIFIED" else 0.0,
         )
 
-    return ValidationCapsule(command=argv, **final)
+    model_payload = dict(final)
+    model_payload.pop("argv", None)
+    return ValidationCapsule(**model_payload)
 
 
 def list_capsules(workspace: Path) -> list[dict[str, Any]]:
