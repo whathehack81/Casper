@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CASPER_ROOT="${CASPER_ROOT:-$HOME/Casper}"
+
+if [[ ! -d "$CASPER_ROOT/casper" ]]; then
+  echo "casper launcher error: CASPER_ROOT does not contain casper package: $CASPER_ROOT" >&2
+  exit 127
+fi
+
+export PYTHONPATH="$CASPER_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m casper "$@"
