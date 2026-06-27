@@ -13,7 +13,17 @@ scratch_run.py
 targets/
 .pytest_cache/
 casper.egg-info/
-
 # Preserve the casper/runtime/ package directory
 !casper/runtime/
 !casper/runtime/*.py
+# local research/evidence artifacts
+/intel/
+/diagnostics/
+/toolchains/
+/indrive.txt
+/indrive403s.txt
+/find_agoda_har.sh
+# common local runtime/cache artifacts
+/.pytest_cache/
+/.mypy_cache/
+/.ruff_cache/
