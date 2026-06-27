@@ -33,35 +33,98 @@ class ToolRun:
 
 
 TOOL_REGISTRY: dict[str, ToolSpec] = {
-    "httpx": ToolSpec("httpx", "httpx", "recon-http", "HTTP probing and technology/status capture"),
-    "subfinder": ToolSpec("subfinder", "subfinder", "recon-dns", "Passive subdomain discovery"),
-    "assetfinder": ToolSpec("assetfinder", "assetfinder", "recon-dns", "Passive asset discovery"),
+    "httpx": ToolSpec(
+        "httpx",
+        "httpx",
+        "recon-http",
+        "HTTP probing and technology/status capture",
+    ),
+    "subfinder": ToolSpec(
+        "subfinder",
+        "subfinder",
+        "recon-dns",
+        "Passive subdomain discovery",
+    ),
+    "assetfinder": ToolSpec(
+        "assetfinder",
+        "assetfinder",
+        "recon-dns",
+        "Passive asset discovery",
+    ),
     "dnsx": ToolSpec("dnsx", "dnsx", "recon-dns", "DNS resolution and enrichment"),
     "naabu": ToolSpec("naabu", "naabu", "recon-port", "Port discovery"),
-    "katana": ToolSpec("katana", "katana", "recon-content", "Crawler and URL discovery"),
+    "katana": ToolSpec(
+        "katana",
+        "katana",
+        "recon-content",
+        "Crawler and URL discovery",
+    ),
     "gau": ToolSpec("gau", "gau", "recon-content", "Archived URL discovery"),
-    "waybackurls": ToolSpec("waybackurls", "waybackurls", "recon-content", "Wayback URL discovery"),
-    "nuclei": ToolSpec("nuclei", "nuclei", "validation-template", "Template-based validation", 300),
+    "waybackurls": ToolSpec(
+        "waybackurls",
+        "waybackurls",
+        "recon-content",
+        "Wayback URL discovery",
+    ),
+    "nuclei": ToolSpec(
+        "nuclei",
+        "nuclei",
+        "validation-template",
+        "Template-based validation",
+        300,
+    ),
     "ffuf": ToolSpec("ffuf", "ffuf", "recon-content", "Content discovery", 300),
     "curl": ToolSpec("curl", "curl", "http-manual", "Manual HTTP request capture"),
     "jq": ToolSpec("jq", "jq", "transform", "JSON filtering"),
     "rg": ToolSpec("rg", "rg", "code-search", "Ripgrep source and evidence search"),
-    "grep": ToolSpec("grep", "grep", "code-search", "Grep source and evidence search"),
+    "grep": ToolSpec(
+        "grep",
+        "grep",
+        "code-search",
+        "Grep source and evidence search",
+    ),
     "git": ToolSpec("git", "git", "code-git", "Git repository inspection"),
-    "trivy": ToolSpec("trivy", "trivy", "code-sca", "Dependency/container/IaC scanning", 300),
-    "gitleaks": ToolSpec("gitleaks", "gitleaks", "code-secret", "Secret scanning", 300),
+    "trivy": ToolSpec(
+        "trivy",
+        "trivy",
+        "code-sca",
+        "Dependency/container/IaC scanning",
+        300,
+    ),
+    "gitleaks": ToolSpec(
+        "gitleaks",
+        "gitleaks",
+        "code-secret",
+        "Secret scanning",
+        300,
+    ),
     "semgrep": ToolSpec("semgrep", "semgrep", "code-sast", "Static analysis", 300),
     "pytest": ToolSpec("pytest", "pytest", "code-test", "Python test execution", 300),
     "go": ToolSpec("go", "go", "code-test", "Go build/test tooling", 300),
     "mvn": ToolSpec("mvn", "mvn", "code-test", "Maven build/test tooling", 300),
-    "gradle": ToolSpec("gradle", "gradle", "code-test", "Gradle build/test tooling", 300),
+    "gradle": ToolSpec(
+        "gradle",
+        "gradle",
+        "code-test",
+        "Gradle build/test tooling",
+        300,
+    ),
     "python": ToolSpec("python", "python", "utility", "Python interpreter utility", 300),
-    "python3": ToolSpec("python3", "python3", "utility", "Python 3 interpreter utility", 300),
+    "python3": ToolSpec(
+        "python3",
+        "python3",
+        "utility",
+        "Python 3 interpreter utility",
+        300,
+    ),
 }
 
 
 def list_tools() -> list[dict[str, Any]]:
-    return [asdict(spec) for spec in sorted(TOOL_REGISTRY.values(), key=lambda item: item.name)]
+    return [
+        asdict(spec)
+        for spec in sorted(TOOL_REGISTRY.values(), key=lambda item: item.name)
+    ]
 
 
 def get_tool(name: str) -> ToolSpec:
@@ -115,7 +178,10 @@ def run_registered_tool(
         "result": "confirmed" if result.exit_code == 0 else "failed",
     }
 
-    evidence = selected_runtime.record_evidence(source=f"tool-{spec.name}", content=evidence_payload)
+    evidence = selected_runtime.record_evidence(
+        source=f"tool-{spec.name}",
+        content=evidence_payload,
+    )
     return ToolRun(
         tool=spec.name,
         command=list(exported["command"]),
