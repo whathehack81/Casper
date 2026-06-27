@@ -3,16 +3,41 @@ from __future__ import annotations
 import argparse
 from dataclasses import asdict
 import json
+from typing import Any
 
-from casper.tools.registry import list_tools, run_registered_tool
+from casper.tools.registry import (
+    doctor_tools,
+    get_profile,
+    list_profiles,
+    list_tools,
+    run_registered_tool,
+)
 
 
-def print_json(payload: dict | list) -> None:
+def print_json(payload: dict[str, Any] | list[dict[str, Any]]) -> None:
     print(json.dumps(payload, indent=2, sort_keys=True))
 
 
 def cmd_list(_: argparse.Namespace) -> None:
     print_json(list_tools())
+
+
+def cmd_doctor(args: argparse.Namespace) -> None:
+    try:
+        print_json(doctor_tools(profile=args.profile))
+    except ValueError as exc:
+        raise SystemExit(f"error: {exc}") from None
+
+
+def cmd_profiles(_: argparse.Namespace) -> None:
+    print(json.dumps(list_profiles(), indent=2, sort_keys=True))
+
+
+def cmd_profile(args: argparse.Namespace) -> None:
+    try:
+        print_json(get_profile(args.name))
+    except ValueError as exc:
+        raise SystemExit(f"error: {exc}") from None
 
 
 def cmd_run(args: argparse.Namespace) -> None:
@@ -43,6 +68,17 @@ def build_parser() -> argparse.ArgumentParser:
 
     list_parser = sub.add_parser("list")
     list_parser.set_defaults(func=cmd_list)
+
+    doctor_parser = sub.add_parser("doctor")
+    doctor_parser.add_argument("--profile")
+    doctor_parser.set_defaults(func=cmd_doctor)
+
+    profiles_parser = sub.add_parser("profiles")
+    profiles_parser.set_defaults(func=cmd_profiles)
+
+    profile_parser = sub.add_parser("profile")
+    profile_parser.add_argument("name")
+    profile_parser.set_defaults(func=cmd_profile)
 
     run_parser = sub.add_parser("run")
     run_parser.add_argument("tool")
