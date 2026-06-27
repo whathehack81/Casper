@@ -663,6 +663,13 @@ def cmd_worker_start(args) -> None:
     })
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "rip":
+        from casper.rip_cli import main as rip_main
+
+        sys.argv = ["casper rip", *sys.argv[2:]]
+        rip_main()
+        return
+
 
     manifest = build_manifest(sys.argv)
     write_manifest(Path(".casper") / "runs" / manifest.run_id / "manifest.json", manifest)
